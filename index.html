@@ -916,6 +916,9 @@ function resetAll(){
   if(!confirm('Clear this assessment, including all photos? This cannot be undone.'))return;
   S=blank(); paintHeader(); renderRegister(); save(); go('setup');
 }
+/* @test-extract-end — everything above this line is DOM-free at parse time and is
+   what test/pdf-smoke.js pulls out to run in Node. Do not move DOM calls above it. */
+
 ['f-date','f-place','f-assessor','f-crew','f-grade','b-sedmin','b-sedmax','b-ledmin','b-ledmax','b-lenmin','b-lenmax']
   .forEach(id=>document.getElementById(id).addEventListener('change',syncHeader));
 
