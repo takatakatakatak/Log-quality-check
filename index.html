@@ -29,6 +29,8 @@
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* no double-tap zoom: two quick In-spec taps must count as two logs, not a zoom */
+html,button,[role=button]{touch-action:manipulation}
 html,body{margin:0;padding:0}
 body{
   background:var(--field);color:var(--ink);font-family:var(--sans);
@@ -119,6 +121,11 @@ textarea{min-height:76px;resize:vertical}
 .tally .side .l{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8C9683}
 .tally .in .n{color:#7ED099}
 .tally .out .n{color:#FF8A72}
+/* tap confirmation — iOS has no vibration API, so the drum flashes instead */
+.tally.flash-in{animation:flash-in .45s ease-out}
+.tally.flash-out{animation:flash-out .45s ease-out}
+@keyframes flash-in{from{box-shadow:inset 0 0 0 5px #7ED099}to{box-shadow:inset 0 0 0 5px transparent}}
+@keyframes flash-out{from{box-shadow:inset 0 0 0 5px #FF8A72}to{box-shadow:inset 0 0 0 5px transparent}}
 
 /* ---------- verdict bar ---------- */
 .verdict{
@@ -151,7 +158,14 @@ textarea{min-height:76px;resize:vertical}
 .entry .body .note{color:var(--ink-2);font-size:14px}
 .entry .thumbs{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .entry .thumbs img{width:46px;height:46px;object-fit:cover;border-radius:3px;border:1px solid var(--rule)}
-.entry .del{appearance:none;background:none;border:0;color:var(--ink-3);font-size:22px;line-height:1;padding:0 2px}
+.entry .id .when{font-size:12px;font-weight:500;color:var(--ink-2);margin-top:2px}
+.entry .body[role=button]{cursor:pointer}
+.entry .hint{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin-top:6px}
+.entry .del{
+  appearance:none;background:none;border:1px solid transparent;border-radius:4px;color:var(--ink-2);
+  font:inherit;font-size:26px;line-height:1;min-width:44px;min-height:44px;margin:-8px -6px -8px 0;padding:0 6px;
+}
+.entry .del.armed{background:var(--defect);color:#fff;font-size:16px;font-weight:700;padding:0 12px}
 
 /* ---------- defect sheet ---------- */
 .sheet{position:fixed;inset:0;z-index:60;background:rgba(20,23,15,.55);display:flex;align-items:flex-end}
@@ -312,7 +326,7 @@ textarea{min-height:76px;resize:vertical}
 <div class="sheet hide" id="sheet">
   <div class="sheet-panel">
     <div class="sheet-head">
-      <h2 id="sheet-title">Log 1</h2><span class="sub">out of spec</span>
+      <h2 id="sheet-title">Log 1</h2><span class="sub" id="sheet-sub">out of spec</span>
     </div>
     <div id="chip-groups"></div>
 
@@ -578,24 +592,40 @@ function showFix(){
 /* ================================================================
    6. LOG CAPTURE
    ================================================================ */
-let draft=null;
+let draft=null, editing=-1;
 function addLog(inSpec){
   syncHeader();
+  const at=new Date().toISOString();
   if(inSpec){
-    S.logs.push({n:S.logs.length+1, ok:true});
-    renderRegister(); save(); haptic();
+    S.logs.push({n:S.logs.length+1, ok:true, at:at});
+    renderRegister(); save(); haptic(true);
     return;
   }
-  draft={n:S.logs.length+1, ok:false, defects:[], meas:'', spec:'', note:'', photos:[]};
-  document.getElementById('sheet-title').textContent='Log '+draft.n;
-  document.getElementById('d-meas').value='';
-  document.getElementById('d-spec').value='';
-  document.getElementById('d-note').value='';
+  openSheet({n:S.logs.length+1, ok:false, at:at, defects:[], meas:'', spec:'', note:'', photos:[]},-1);
+}
+/* reopen a saved out-of-spec log; works on a copy so Cancel discards changes */
+function editLog(l){
+  openSheet(Object.assign({},l,{defects:l.defects.slice(),photos:l.photos.slice()}),S.logs.indexOf(l));
+}
+function openSheet(d,idx){
+  draft=d; editing=idx;
+  document.getElementById('sheet-title').textContent='Log '+d.n;
+  document.getElementById('sheet-sub').textContent=idx>=0?'editing':'out of spec';
+  document.getElementById('d-meas').value=d.meas||'';
+  document.getElementById('d-spec').value=d.spec||'';
+  document.getElementById('d-note').value=d.note||'';
   document.getElementById('photo-msg').textContent='';
   buildChips(); renderStrip();
   document.getElementById('sheet').classList.remove('hide');
 }
-function haptic(){ if(navigator.vibrate)navigator.vibrate(12); }
+/* iOS Safari ignores navigator.vibrate, so the tally also flashes: the forester
+   can confirm a tap registered from the corner of his eye. */
+function haptic(ok){
+  if(navigator.vibrate)navigator.vibrate(12);
+  const t=document.querySelector('.tally'); if(!t)return;
+  t.classList.remove('flash-in','flash-out'); void t.offsetWidth;
+  t.classList.add(ok?'flash-in':'flash-out');
+}
 
 function buildChips(){
   const box=document.getElementById('chip-groups'); box.innerHTML='';
@@ -617,7 +647,7 @@ function buildChips(){
     d.appendChild(c); box.appendChild(d);
   });
 }
-function cancelSheet(){ draft=null; document.getElementById('sheet').classList.add('hide'); }
+function cancelSheet(){ draft=null; editing=-1; document.getElementById('sheet').classList.add('hide'); sweepUrls(); }
 function commitSheet(){
   draft.meas=document.getElementById('d-meas').value.trim();
   draft.spec=document.getElementById('d-spec').value.trim();
@@ -626,9 +656,12 @@ function commitSheet(){
     document.getElementById('photo-msg').innerHTML='<span style="color:var(--defect)">Pick at least one defect, or add a note describing it.</span>';
     return;
   }
-  S.logs.push(draft); draft=null;
+  const wasEdit=editing>=0;
+  if(wasEdit)S.logs[editing]=draft; else S.logs.push(draft);
+  draft=null; editing=-1;
   document.getElementById('sheet').classList.add('hide');
-  renderRegister(); save(); haptic();
+  renderRegister(); save(); sweepUrls();
+  if(!wasEdit)haptic(false);
 }
 
 /* photo capture + downscale */
@@ -668,7 +701,7 @@ function renderStrip(){
   const s=document.getElementById('strip'); s.innerHTML='';
   draft.photos.forEach((bl,i)=>{
     const fig=document.createElement('figure');
-    const img=document.createElement('img'); img.src=URL.createObjectURL(bl); img.alt='Photo '+(i+1);
+    const img=document.createElement('img'); img.src=urlFor(bl); img.alt='Photo '+(i+1);
     const rm=document.createElement('button'); rm.type='button'; rm.textContent='×'; rm.setAttribute('aria-label','Remove photo '+(i+1));
     rm.onclick=()=>{draft.photos.splice(i,1);renderStrip();};
     fig.appendChild(img); fig.appendChild(rm); s.appendChild(fig);
@@ -678,30 +711,53 @@ function renderStrip(){
 /* ================================================================
    7. REGISTER + TALLY
    ================================================================ */
+/* One object URL per photo Blob, reused across re-renders (the register re-renders
+   on every tap) and revoked once no log or draft holds the Blob any more. */
+const urls=new Map();
+function urlFor(bl){let u=urls.get(bl);if(!u){u=URL.createObjectURL(bl);urls.set(bl,u);}return u;}
+function sweepUrls(){
+  const live=new Set();
+  S.logs.forEach(l=>(l.photos||[]).forEach(b=>live.add(b)));
+  if(draft)draft.photos.forEach(b=>live.add(b));
+  [...urls.keys()].forEach(b=>{if(!live.has(b)){URL.revokeObjectURL(urls.get(b));urls.delete(b);}});
+}
 function renderRegister(){
   const box=document.getElementById('register'); box.innerHTML='';
   S.logs.slice().reverse().forEach(l=>{
     const d=document.createElement('div'); d.className='entry '+(l.ok?'good':'bad');
     const id=document.createElement('div'); id.className='id'; id.textContent=String(l.n).padStart(2,'0');
+    if(l.at){const w=document.createElement('div');w.className='when';w.textContent=fmtTime(l.at);id.appendChild(w);}
     const body=document.createElement('div'); body.className='body';
     if(l.ok){ body.textContent='In spec'; }
     else{
+      body.setAttribute('role','button'); body.tabIndex=0;
+      body.setAttribute('aria-label','Edit log '+l.n);
+      body.onclick=()=>editLog(l);
       const t=document.createElement('div'); t.className='tags';
       t.textContent=l.defects.join(' · ')||'Defect'; body.appendChild(t);
       const bits=[l.meas&&('measured '+l.meas), l.spec&&('spec '+l.spec), l.note].filter(Boolean);
       if(bits.length){const p=document.createElement('div');p.className='note';p.textContent=bits.join(' — ');body.appendChild(p);}
       if(l.photos.length){
         const th=document.createElement('div'); th.className='thumbs';
-        l.photos.forEach(bl=>{const i=document.createElement('img');i.src=URL.createObjectURL(bl);i.alt='';th.appendChild(i);});
+        l.photos.forEach(bl=>{const i=document.createElement('img');i.src=urlFor(bl);i.alt='';th.appendChild(i);});
         body.appendChild(th);
       }
+      const hint=document.createElement('div'); hint.className='hint'; hint.textContent='Tap to edit';
+      body.appendChild(hint);
     }
-    const del=document.createElement('button'); del.className='del'; del.textContent='×';
+    /* Delete takes two taps: the first arms the button for three seconds. A gloved
+       mis-tap on the register must not silently destroy a log and its photos. */
+    const del=document.createElement('button'); del.className='del'; del.type='button'; del.textContent='×';
     del.setAttribute('aria-label','Delete log '+l.n);
     del.onclick=()=>{
+      if(!del.classList.contains('armed')){
+        del.classList.add('armed'); del.textContent='Delete?';
+        setTimeout(()=>{del.classList.remove('armed');del.textContent='×';},3000);
+        return;
+      }
       S.logs=S.logs.filter(x=>x!==l);
       S.logs.forEach((x,i)=>x.n=i+1);
-      renderRegister(); save();
+      renderRegister(); save(); sweepUrls();
     };
     d.appendChild(id); d.appendChild(body); d.appendChild(del); box.appendChild(d);
   });
