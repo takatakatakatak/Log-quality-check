@@ -55,12 +55,15 @@ installation, and is a considerably easier approval than app certification.
 
 ## Using it
 
-**1 · Setup** — set the date, tap *Get fix* for coordinates, fill in assessor, crew
+**1 · Setup** — set the date, tap *Get fix* for coordinates (once location is
+allowed, later assessments take the fix automatically), fill in assessor, crew
 and grade. Record the stack bracket if you are using the bracketing method.
 
 **2 · Check** — tap **In spec** or **Out of spec** for each log. In spec is one tap.
 Out of spec opens the defect sheet: pick defects, optionally record measured against
-spec, add a note, take photos. Any log can be deleted from the register.
+spec, add a note, take photos. Tap an out-of-spec entry in the register to edit it.
+To delete a log, tap × and then *Delete?* within three seconds. Each log records the
+time it was checked.
 
 **3 · Report** — review the summary and defect frequency, then *Create PDF and send*
 to hand the PDF to the iOS share sheet. Choose Mail and it arrives as an attachment;
@@ -71,13 +74,18 @@ on next launch.
 
 ## Updating
 
-After editing `index.html`, bump the cache version in `sw.js`:
+After editing `index.html`, bump the cache version in `sw.js` and the matching label
+in `index.html`:
 
 ```js
-const CACHE = 'logcheck-v2';   // was v1
+const CACHE = 'logcheck-v3';   // sw.js        (was v2)
+const APP_VERSION = 'v3';      // index.html   (was v2)
 ```
 
-Phones already carrying the old shell will keep serving it until this changes.
+Phones already carrying the old shell will keep serving it until `sw.js` changes. The
+test fails if the two disagree. Once a phone with reception picks up the new version,
+its header shows *Update ready · tap to restart*; tapping it reloads straight back into
+the assessment in progress.
 
 ## Testing
 

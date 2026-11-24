@@ -42,10 +42,15 @@ increments the tally and does nothing else — no confirmation, no dialogue, no
 required field, no undo prompt. Every future feature must leave that path at exactly
 one tap. Photographs, defect selection and notes exist only behind the red button.
 
-**5. Bump `CACHE` in `sw.js` on every change to `index.html`.** Currently
-`logcheck-v1`. The service worker serves cache-first, so without a version bump,
-installed phones keep running the old shell. This is the single most common way this
-class of app goes stale in the field.
+**5. Bump `CACHE` in `sw.js` on every change to `index.html`, and `APP_VERSION` in
+`index.html` with it.** Currently `logcheck-v2` / `'v2'`. The browser only reinstalls
+a service worker when `sw.js` changes byte-for-byte; changing `CACHE` is that change,
+and the install then re-fetches the whole shell (bypassing the HTTP cache) into a fresh
+cache. Without the bump, installed phones keep running the old shell — the single most
+common way this class of app goes stale in the field. `APP_VERSION` is only the label
+shown in the masthead so you can see which build a phone is running; it plays no part
+in fetching, but `test/pdf-smoke.js` fails if it disagrees with `CACHE`, which catches
+a half-done bump.
 
 **6. Do not invent grade tolerances.** Sweep limits, minimum SED, length tolerances
 and trim allowances vary by customer and by contract. The defect list is deliberately
@@ -102,8 +107,9 @@ always produces baseline YCbCr JPEG, which is exactly what `/DCTDecode` with
 `/DeviceRGB` expects, so photos are passed through with no re-encoding.
 
 `Doc` API: `text()` flows and wraps with automatic page breaks; `put()` places a
-single string at absolute coordinates; `kv()` draws a label/value row; `head()` draws
-a section rule; `rect()`, `line()`, `drawImage()` are absolute. `space(h)` breaks the
+single string at absolute coordinates and does **not** wrap — wrap with `wrapText()`
+first or use `text()`; `kv()` draws a label/value row; `head(s, keep)` draws a section
+rule and keeps `keep` points of following content on the same page; `rect()`, `line()`, `drawImage()` are absolute. `space(h)` breaks the
 page if `h` will not fit. `footers()` runs last, after page count is known.
 `build()` assembles objects, computes byte offsets, and writes the xref table.
 
@@ -111,7 +117,12 @@ Character widths are **approximated** by class (narrow / wide / digit / caps /
 default) rather than using the real Helvetica metrics table. Line wrapping is
 therefore slightly conservative. That is a deliberate trade of ~90 lines of width
 table for a small amount of right-margin slack. If text ever overflows the margin,
-fix `charW()`, do not add a font library.
+fix `charW()`, do not add a font library. The smoke test checks every text run in
+the generated PDF ends inside the right margin, by this same width model.
+
+Text is encoded as WinAnsi. `esc()` maps the Unicode punctuation iOS types by default
+(curly quotes, en/em dashes, ellipsis) to their WinAnsi codes; anything unmappable
+becomes `?`.
 
 ### State
 
@@ -121,16 +132,23 @@ S = {
   gps: { lat, lon, acc, at } | null,
   bracket: { sedmin, sedmax, ledmin, ledmax, lenmin, lenmax },   // strings
   logs: [
-    { n, ok: true },
-    { n, ok: false, defects: [], meas, spec, note, photos: [Blob] }
+    { n, ok: true, at },                       // at: ISO time of the verdict tap
+    { n, ok: false, at, defects: [], meas, spec, note, photos: [Blob] }
   ]
 }
 ```
 
-Persisted whole to IndexedDB (`logcheck` → `kv` → `session`), debounced 250 ms, on
-every mutation. Blobs survive structured clone, which is why photos are Blobs and not
-data URIs — data URIs would be ~33% larger and would bloat every autosave.
-`localStorage` holds only the small recall lists for assessor / crew / grade.
+In memory, photos are Blobs. On disk (IndexedDB `logcheck`, version 2), photos live in
+their own `photos` store, written once each; the `kv` → `session` record holds their
+string keys instead (`pack()` does the swap). That way an in-spec tap rewrites a few KB,
+not every photo taken so far. Logs saved by v1 with Blobs inline still load and are
+migrated on the next save; unreferenced photos are pruned at boot and on clear.
+Blobs rather than data URIs because data URIs are ~33% larger.
+
+Saves are debounced 250 ms and flushed immediately on `visibilitychange`/`pagehide`,
+because iOS can suspend a backgrounded web app without warning. `localStorage` holds
+only the small recall lists for assessor / crew / grade, updated when a header field
+changes.
 
 Photos are downscaled to a 1400 px long edge at JPEG quality 0.72 on capture, taking
 a 12 MP iPhone photo to roughly 150 KB. Do not raise this without checking the
@@ -201,9 +219,24 @@ const GRADES = {
 
 Wait for the real specification document before implementing. See constraint 6.
 
-**Service worker update prompt.** Currently the worker refreshes silently in the
-background and the new shell appears on next launch. A visible "update available"
-affordance would be an improvement, but must not interrupt an assessment in progress.
+## Update notice (done)
+
+When a new worker takes over an already-controlled page, the masthead label turns into
+a green "Update ready · tap to restart" button. It never interrupts: tapping it saves,
+reloads, and resumes the assessment without the resume prompt (a `sessionStorage`
+flag). It is ignored while the defect sheet is open. Untapped, the new shell simply
+appears on next launch.
+
+## Register interaction rules
+
+- Delete takes two taps: the first arms the × as "Delete?" for three seconds.
+- Tapping an out-of-spec entry reopens it in the defect sheet on a copy; Cancel
+  discards edits. In-spec entries are not editable — delete and re-tap instead.
+- Each verdict flashes the tally drum (green / red), because iOS Safari ignores
+  `navigator.vibrate`. Buttons use `touch-action: manipulation` so quick taps are
+  counted, not treated as a double-tap zoom.
+- A GPS fix is taken automatically at boot only when location permission is already
+  `granted`; the permission prompt itself stays behind the Get fix button.
 
 ## Things deliberately not done
 
