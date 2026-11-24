@@ -65,7 +65,8 @@ and grade. Record the stack bracket if you are using the bracketing method.
 Out of spec opens the defect sheet: pick defects, optionally record measured against
 spec, add a note, take photos. Tap an out-of-spec entry in the register to edit it.
 To delete a log, tap × and then *Delete?* within three seconds. Each log records the
-time it was checked.
+time it was checked. When you're done, tap **Finish & report** just above the verdict
+buttons.
 
 **3 · Report** — review the summary and defect frequency, then *Create PDF and send*
 to hand the PDF to the iOS share sheet. Choose Mail and it arrives as an attachment;

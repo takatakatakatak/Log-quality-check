@@ -259,6 +259,13 @@ appears on next launch.
 
 ## Register interaction rules
 
+- Finishing: once at least one log exists, a "Finish & report" button (with the log
+  count) appears pinned above the verdict buttons. It goes above them, never between
+  or beside them, so the In spec / Out of spec row keeps its size and place under the
+  thumb. A mis-tap only changes screen; the Report screen opens with "Back to checking".
+  The bar's height changes when Finish appears, so `padForBar()` resizes the page's
+  bottom padding to keep the last register entry reachable.
+
 - Delete takes two taps: the first arms the × as "Delete?" for three seconds.
 - Tapping an out-of-spec entry reopens it in the defect sheet on a copy; Cancel
   discards edits. In-spec entries are not editable — delete and re-tap instead.
