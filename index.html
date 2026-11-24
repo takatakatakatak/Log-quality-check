@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Log Check">
-<meta name="theme-color" content="#12331F">
+<meta name="theme-color" content="#14170F">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <link rel="icon" href="./icon-192.png">
@@ -34,7 +34,7 @@ html,button,[role=button]{touch-action:manipulation}
 html,body{margin:0;padding:0}
 body{
   background:var(--field);color:var(--ink);font-family:var(--sans);
-  font-size:17px;line-height:1.45;-webkit-text-size-adjust:100%;
+  font-size:17px;font-weight:500;line-height:1.45;-webkit-text-size-adjust:100%;
   padding-bottom:calc(150px + env(safe-area-inset-bottom));
 }
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -56,8 +56,8 @@ body{
 .steps{display:flex;background:var(--ink);border-top:1px solid #2C3126}
 .steps button{
   flex:1;appearance:none;border:0;background:transparent;color:#8C9683;
-  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
-  padding:11px 4px 13px;border-bottom:3px solid transparent;
+  font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  min-height:48px;padding:13px 4px 14px;border-bottom:3px solid transparent;
 }
 .steps button[aria-current="true"]{color:#FFF;border-bottom-color:var(--spec)}
 
@@ -65,15 +65,15 @@ main{padding:16px 14px 0;max-width:640px;margin:0 auto}
 
 /* ---------- structure ---------- */
 .eyebrow{
-  font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--ink-3);margin:0 0 8px;display:flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-2);margin:0 0 8px;display:flex;align-items:center;gap:8px;
 }
 .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
 .card{background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:14px;margin-bottom:16px}
 
 label.fl{display:block;margin-bottom:14px}
 label.fl > span{
-  display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  display:block;font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink-2);margin-bottom:5px;
 }
 input[type=text],input[type=date],input[type=number],textarea,select{
@@ -85,10 +85,10 @@ textarea{min-height:76px;resize:vertical}
 .row > *{flex:1;min-width:0}
 
 .btn{
-  appearance:none;font:inherit;font-weight:600;border-radius:3px;
+  appearance:none;font:inherit;font-weight:600;border-radius:3px;min-height:48px;
   padding:12px 14px;border:1px solid var(--ink);background:var(--paper);color:var(--ink);
 }
-.btn-quiet{border-color:var(--rule);color:var(--ink-2);font-weight:500}
+.btn-quiet{border-color:#B9C0AD;color:var(--ink-2);font-weight:600}
 .btn-solid{background:var(--ink);color:#fff}
 .btn-wide{width:100%}
 .btn:disabled{opacity:.4}
@@ -97,7 +97,7 @@ textarea{min-height:76px;resize:vertical}
 .gps{display:flex;gap:10px;align-items:stretch}
 .gps .btn{white-space:nowrap}
 .readout{
-  flex:1;font-family:var(--mono);font-size:13px;line-height:1.35;
+  flex:1;font-family:var(--mono);font-size:15px;line-height:1.35;
   background:var(--field);border:1px solid var(--rule);border-radius:3px;padding:8px 10px;
   display:flex;flex-direction:column;justify-content:center;color:var(--ink-2);
 }
@@ -114,11 +114,11 @@ textarea{min-height:76px;resize:vertical}
   font-variant-numeric:tabular-nums;letter-spacing:-.02em;
 }
 .tally .drum .cap{
-  font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#8C9683;
+  font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#A9B29F;
 }
 .tally .side{text-align:center}
-.tally .side .n{font-family:var(--mono);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
-.tally .side .l{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8C9683}
+.tally .side .n{font-family:var(--mono);font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}
+.tally .side .l{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#A9B29F}
 .tally .in .n{color:#7ED099}
 .tally .out .n{color:#FF8A72}
 /* tap confirmation — iOS has no vibration API, so the drum flashes instead */
@@ -139,7 +139,7 @@ textarea{min-height:76px;resize:vertical}
   font-family:var(--sans);font-size:19px;font-weight:700;letter-spacing:.03em;
   box-shadow:0 2px 0 rgba(0,0,0,.22);
 }
-.vbtn small{display:block;font-family:var(--mono);font-size:10px;font-weight:500;
+.vbtn small{display:block;font-family:var(--mono);font-size:12px;font-weight:600;
   letter-spacing:.14em;text-transform:uppercase;opacity:.78;margin-top:3px}
 .vbtn.yes{background:var(--spec)}
 .vbtn.no{background:var(--defect)}
@@ -152,12 +152,12 @@ textarea{min-height:76px;resize:vertical}
 }
 .entry.bad{border-left:5px solid var(--defect)}
 .entry.good{border-left:5px solid var(--spec)}
-.entry .id{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink-3);padding-top:2px}
-.entry .body{flex:1;min-width:0;font-size:15px}
-.entry .body .tags{font-size:14px;color:var(--defect);font-weight:600}
-.entry .body .note{color:var(--ink-2);font-size:14px}
+.entry .id{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ink-2);padding-top:2px}
+.entry .body{flex:1;min-width:0;font-size:17px}
+.entry .body .tags{font-size:17px;color:var(--defect);font-weight:700}
+.entry .body .note{color:var(--ink-2);font-size:16px}
 .entry .thumbs{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
-.entry .thumbs img{width:46px;height:46px;object-fit:cover;border-radius:3px;border:1px solid var(--rule)}
+.entry .thumbs img{width:56px;height:56px;object-fit:cover;border-radius:3px;border:1px solid var(--rule)}
 .entry .id .when{font-size:12px;font-weight:500;color:var(--ink-2);margin-top:2px}
 .entry .body[role=button]{cursor:pointer}
 .entry .hint{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin-top:6px}
@@ -176,37 +176,37 @@ textarea{min-height:76px;resize:vertical}
 }
 .sheet-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
 .sheet-head h2{margin:0;font-size:19px;font-weight:700}
-.sheet-head .sub{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.sheet-head .sub{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
 .group{margin-bottom:12px}
 .group > h3{
-  font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--ink-3);margin:0 0 6px;
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-2);margin:0 0 6px;
 }
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{
-  appearance:none;font:inherit;font-size:15px;padding:9px 13px;border-radius:20px;
-  border:1.5px solid var(--rule);background:var(--paper);color:var(--ink-2);
+  appearance:none;font:inherit;font-size:17px;font-weight:500;min-height:44px;padding:9px 14px;border-radius:22px;
+  border:1.5px solid #B9C0AD;background:var(--paper);color:var(--ink);
 }
 .chip[aria-pressed="true"]{background:var(--defect);border-color:var(--defect);color:#fff;font-weight:600}
 .photo-strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .photo-strip figure{margin:0;position:relative}
 .photo-strip img{width:82px;height:82px;object-fit:cover;border-radius:4px;border:1px solid var(--rule)}
 .photo-strip button{
-  position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:12px;
-  border:0;background:var(--ink);color:#fff;font-size:14px;line-height:24px;padding:0;
+  position:absolute;top:-8px;right:-8px;width:32px;height:32px;border-radius:16px;
+  border:2px solid var(--field);background:var(--ink);color:#fff;font-size:18px;line-height:28px;padding:0;
 }
 
 /* ---------- report ---------- */
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
 .stat{background:var(--paper);padding:12px}
 .stat .n{font-family:var(--mono);font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}
-.stat .l{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.stat .l{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 .bar{height:10px;background:var(--defect);border-radius:5px;overflow:hidden;margin:10px 0 4px}
 .bar > i{display:block;height:100%;background:var(--spec)}
-.freq{width:100%;border-collapse:collapse;font-size:15px}
+.freq{width:100%;border-collapse:collapse;font-size:17px}
 .freq td{padding:7px 0;border-bottom:1px solid var(--rule)}
 .freq td:last-child{text-align:right;font-family:var(--mono);font-weight:600}
-.msg{font-size:14px;color:var(--ink-2);margin:10px 0 0}
+.msg{font-size:16px;color:var(--ink-2);margin:10px 0 0}
 .msg.warn{color:var(--defect)}
 .pillrow{display:flex;gap:8px;margin-top:10px}
 </style>
@@ -511,31 +511,81 @@ function blank(){
 function todayISO(){const d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 
+/* Photos live in their own object store, written once when first saved. The session
+   record holds only their keys, so an in-spec tap rewrites a few KB rather than every
+   photo taken so far. In memory, logs[].photos stays an array of Blobs. */
 let db=null;
 function openDB(){
   return new Promise(res=>{
-    const r=indexedDB.open('logcheck',1);
-    r.onupgradeneeded=()=>{r.result.createObjectStore('kv');};
-    r.onsuccess=()=>{db=r.result;res(db);};
+    let r; try{r=indexedDB.open('logcheck',2);}catch(e){return res(null);}
+    r.onupgradeneeded=()=>{const d=r.result;
+      if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');
+      if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos');};
+    r.onsuccess=()=>{db=r.result;db.onversionchange=()=>db.close();res(db);};
     r.onerror=()=>res(null);
+    r.onblocked=()=>res(null);
   });
+}
+const photoKey=new WeakMap(), storedPhotos=new Set();
+let photoSeq=0;
+function keyFor(bl){let k=photoKey.get(bl);
+  if(!k){k='p'+Date.now().toString(36)+'-'+(photoSeq++);photoKey.set(bl,k);}return k;}
+/* pure: the session record to store, plus photo Blobs not yet in the photos store */
+function pack(state,stored){
+  const fresh=[];
+  const logs=state.logs.map(l=>l.ok?l:Object.assign({},l,{photos:(l.photos||[]).map(bl=>{
+    const k=keyFor(bl); if(!stored.has(k))fresh.push([k,bl]); return k;})}));
+  return {session:Object.assign({},state,{logs:logs}),fresh:fresh};
 }
 let saveTimer=null;
-function save(){
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    if(!db)return;
-    try{db.transaction('kv','readwrite').objectStore('kv').put(S,'session');}catch(e){}
-  },250);
-}
-function loadSession(){
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,250);}
+function saveNow(){
+  clearTimeout(saveTimer); saveTimer=null;
   return new Promise(res=>{
-    if(!db)return res(null);
+    if(!db)return res();
     try{
-      const r=db.transaction('kv','readonly').objectStore('kv').get('session');
-      r.onsuccess=()=>res(r.result||null); r.onerror=()=>res(null);
-    }catch(e){res(null);}
+      const p=pack(S,storedPhotos);
+      const tx=db.transaction(['kv','photos'],'readwrite');
+      const ps=tx.objectStore('photos');
+      p.fresh.forEach(([k,bl])=>ps.put(bl,k));
+      tx.objectStore('kv').put(p.session,'session');
+      tx.oncomplete=()=>{p.fresh.forEach(([k])=>storedPhotos.add(k));res();};
+      tx.onerror=tx.onabort=()=>res();
+    }catch(e){res();}
   });
+}
+/* write any pending save immediately — called when the app is backgrounded */
+function flush(){return saveTimer?saveNow():Promise.resolve();}
+function idbGet(store,key){
+  return new Promise(res=>{
+    try{const r=db.transaction(store,'readonly').objectStore(store).get(key);
+      r.onsuccess=()=>res(r.result); r.onerror=()=>res(undefined);}catch(e){res(undefined);}
+  });
+}
+async function loadSession(){
+  if(!db)return null;
+  const s=await idbGet('kv','session'); if(!s)return null;
+  for(const l of s.logs||[]){
+    if(l.ok||!l.photos)continue;
+    const out=[];
+    for(const p of l.photos){
+      if(typeof p==='string'){const bl=await idbGet('photos',p);
+        if(bl){photoKey.set(bl,p);storedPhotos.add(p);out.push(bl);}}
+      else if(p)out.push(p);            // v1 record held Blobs inline; moved out on next save
+    }
+    l.photos=out;
+  }
+  return s;
+}
+/* delete stored photos no longer referenced by the session (deleted logs, removed photos) */
+function prunePhotos(){
+  if(!db)return;
+  const live=new Set();
+  S.logs.forEach(l=>(l.photos||[]).forEach(bl=>{const k=photoKey.get(bl);if(k)live.add(k);}));
+  try{
+    const st=db.transaction('photos','readwrite').objectStore('photos'), r=st.getAllKeys();
+    r.onsuccess=()=>r.result.forEach(k=>{if(!live.has(k)){st.delete(k);storedPhotos.delete(k);}});
+  }catch(e){}
 }
 /* small recall lists live in localStorage — they're just strings */
 function recall(key){try{return JSON.parse(localStorage.getItem('lc_'+key)||'[]');}catch(e){return [];}}
@@ -582,6 +632,14 @@ function getFix(){
       2:'position unavailable. Try again in the open.',3:'timed out. Try again.'}[err.code]||'unknown error.')+
       ' Type the location description instead.';
   },{enableHighAccuracy:true,timeout:30000,maximumAge:0});
+}
+/* Take a fix on its own when location permission is already granted, so a new
+   assessment starts with coordinates. Never triggers the permission prompt itself —
+   that stays behind the Get fix button. */
+function autoFix(){
+  if(S.gps||!navigator.geolocation||!navigator.permissions||!navigator.permissions.query)return;
+  navigator.permissions.query({name:'geolocation'})
+    .then(p=>{if(p.state==='granted'&&!S.gps)getFix();}).catch(()=>{});
 }
 function showFix(){
   const o=document.getElementById('gps-out');
@@ -976,9 +1034,12 @@ function syncHeader(){
   ['sedmin','sedmax','ledmin','ledmax','lenmin','lenmax'].forEach(k=>{
     S.bracket[k]=document.getElementById('b-'+k).value.trim();
   });
+  save();
+}
+/* recall lists update when a header field is committed, not on every log tap */
+function rememberHeader(){
   remember('assessor',S.assessor); remember('crew',S.crew); remember('grade',S.grade);
   fillList('l-assessor','assessor'); fillList('l-crew','crew'); fillList('l-grade','grade');
-  save();
 }
 function paintHeader(){
   document.getElementById('f-date').value=S.date;
@@ -993,13 +1054,19 @@ function paintHeader(){
 }
 function resetAll(){
   if(!confirm('Clear this assessment, including all photos? This cannot be undone.'))return;
-  S=blank(); paintHeader(); renderRegister(); save(); go('setup');
+  S=blank(); paintHeader(); renderRegister(); sweepUrls(); go('setup');
+  saveNow().then(prunePhotos); autoFix();
 }
 /* @test-extract-end — everything above this line is DOM-free at parse time and is
    what test/pdf-smoke.js pulls out to run in Node. Do not move DOM calls above it. */
 
 ['f-date','f-place','f-assessor','f-crew','f-grade','b-sedmin','b-sedmax','b-ledmin','b-ledmax','b-lenmin','b-lenmax']
-  .forEach(id=>document.getElementById(id).addEventListener('change',syncHeader));
+  .forEach(id=>document.getElementById(id).addEventListener('change',()=>{syncHeader();rememberHeader();}));
+
+/* iOS may suspend or kill a backgrounded web app without warning: write pending
+   changes the moment the app is hidden instead of waiting out the debounce. */
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush();});
+window.addEventListener('pagehide',()=>flush());
 
 /* ---- offline install (service worker) ---- */
 function offlineState(t){const el=document.getElementById('ver');if(el)el.textContent=t;}
@@ -1018,15 +1085,22 @@ function offlineState(t){const el=document.getElementById('ver');if(el)el.textCo
 
 (async function boot(){
   await openDB();
+  // ask iOS not to evict the assessment under storage pressure (best effort)
+  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
   const prev=await loadSession();
-  if(prev && prev.logs && prev.logs.length &&
-     confirm('Resume the unfinished assessment from '+fmtDate(prev.date)+' ('+prev.logs.length+' logs)?')){
-    S=prev;
-  }else if(prev && prev.logs && prev.logs.length){
-    S=blank();
+  let start='setup';
+  if(prev && prev.logs && prev.logs.length){
+    if(confirm('Resume the unfinished assessment from '+fmtDate(prev.date)+' ('+prev.logs.length+' logs)?')){
+      S=prev; start='check';
+    }else S=blank();
+  }else if(prev && prev.date===todayISO()){
+    S=prev;   // header filled in earlier today, no logs yet: keep it
   }
+  S.bracket=S.bracket||{};
   fillList('l-assessor','assessor'); fillList('l-crew','crew'); fillList('l-grade','grade');
-  paintHeader(); renderRegister(); go('setup');
+  paintHeader(); renderRegister(); go(start);
+  saveNow().then(prunePhotos);   // also migrates v1 inline photos into the photos store
+  autoFix();
 })();
 </script>
 </body>
