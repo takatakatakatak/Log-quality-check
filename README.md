@@ -7,7 +7,9 @@ Works offline. Nothing is uploaded. Produces a PDF you can attach straight to an
 email from the phone.
 
 - Automatic date and GPS fix, with a manual location description
-- Assessor, crew/operation and log grade, with recall of previous entries
+- Assessor and crew/operation with recall of previous entries
+- Log grade picked from a type-to-search list (type `S16` for 16 cm SED sawlogs), or
+  typed by hand if it isn't listed
 - Optional stack bracket: min/max SED, LED and length
 - One tap per in-spec log; defects, measurements, notes and photos behind one button
 - PDF report with summary, defect frequency, an out-of-spec register and a photo appendix

@@ -76,8 +76,8 @@ main{padding:16px 14px 0;max-width:640px;margin:0 auto}
 .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
 .card{background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:14px;margin-bottom:16px}
 
-label.fl{display:block;margin-bottom:14px}
-label.fl > span{
+label.fl,.fl.combo{display:block;margin-bottom:14px}
+label.fl > span,.combo-label{
   display:block;font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink-2);margin-bottom:5px;
 }
@@ -97,6 +97,25 @@ textarea{min-height:76px;resize:vertical}
 .btn-solid{background:var(--ink);color:#fff}
 .btn-wide{width:100%}
 .btn:disabled{opacity:.4}
+
+/* ---------- grade picker (type to search) ---------- */
+.combo-list{
+  margin-top:6px;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:var(--paper);border:1px solid #B9C0AD;border-radius:4px;
+}
+.combo-grp{
+  position:sticky;top:0;background:var(--field);border-bottom:1px solid var(--rule);
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-2);padding:6px 12px;
+}
+.combo-opt{
+  display:flex;align-items:center;min-height:48px;padding:10px 12px;border-bottom:1px solid var(--rule);
+  font-family:var(--mono);font-size:17px;font-weight:600;color:var(--ink);cursor:pointer;
+}
+.combo-opt:last-child{border-bottom:0}
+.combo-opt[aria-selected="true"]{background:var(--spec-tint);box-shadow:inset 4px 0 0 var(--spec)}
+.combo-opt.free{font-family:var(--sans);color:var(--crayon)}
+.combo-opt.free small{margin-left:auto;padding-left:10px;font-size:13px;color:var(--ink-2);font-weight:500}
 
 /* ---------- GPS ---------- */
 .gps{display:flex;gap:10px;align-items:stretch}
@@ -250,8 +269,13 @@ textarea{min-height:76px;resize:vertical}
     <label class="fl"><span>Crew / operation</span>
       <input type="text" id="f-crew" list="l-crew" autocapitalize="words"><datalist id="l-crew"></datalist></label>
 
-    <label class="fl" style="margin-bottom:0"><span>Log grade</span>
-      <input type="text" id="f-grade" list="l-grade" placeholder="e.g. S_SL_4.8_16" autocapitalize="characters"><datalist id="l-grade"></datalist></label>
+    <div class="fl combo" style="margin-bottom:0">
+      <label for="f-grade" class="combo-label">Log grade</label>
+      <input type="text" id="f-grade" role="combobox" aria-autocomplete="list" aria-expanded="false"
+        aria-controls="grade-list" autocomplete="off" autocorrect="off" autocapitalize="characters"
+        spellcheck="false" enterkeyhint="done" placeholder="Type to search, e.g. S16">
+      <div id="grade-list" class="combo-list hide" role="listbox" aria-label="Grade codes"></div>
+    </div>
   </div>
 
   <p class="eyebrow">Stack bracket <span style="text-transform:none;letter-spacing:0">optional</span></p>
@@ -494,7 +518,7 @@ class Doc{
 }
 
 /* ================================================================
-   2. DEFECT SCHEDULE
+   2. DEFECT SCHEDULE + GRADE CODES
    ================================================================ */
 const DEFECTS=[
  ['Dimension',['SED under spec','LED over spec','Short length','Over length / trim','Butt flare not trimmed','Excessive taper']],
@@ -504,6 +528,51 @@ const DEFECTS=[
  ['Biological',['Decay / rot','Blue stain','Insect / borer','Resin pocket','Kino / gum vein']],
  ['Presentation',['Excess bark','Mud / stone / foreign matter','Wrong grade segregation','Wrong stack / parcel','Wire or metal']]
 ];
+
+/* Grade codes called in over recent weeks: species _ product _ contract length (m) _ SED (cm).
+   Descriptive only — no tolerances are derived from these (see CLAUDE.md, constraint 6).
+   Any grade not listed can still be typed in by hand. */
+const GRADE_CODES=[
+ 'A_A_3.8_30',
+ 'A_BS_3.7_30','A_BS_4.3_30','A_BS_4.9_30','A_BS_5.5_30',
+ 'A_DPB_5.1_33','A_DPB_5.1_35',
+ 'A_DS_3.6_14',
+ 'A_K_5.8_22',
+ 'A_PB_5.1_35',
+ 'A_PBS_4.9_25','A_PBS_5.5_25','A_PBS_6.1_25',
+ 'A_PW_0.0_5','A_PW_0.0_7',
+ 'A_SL_0.0_30','A_SL_3.6_14','A_SL_4.8_16','A_SL_4.9_16','A_SL_4.9_20','A_SL_4.9_22','A_SL_4.9_25','A_SL_4.9_30','A_SL_5.4_16','A_SL_5.5_20','A_SL_5.5_22','A_SL_5.5_30','A_SL_6.1_22',
+ 'S_A_3.8_30','S_A_5.8_30',
+ 'S_LS_0.0_20',
+ 'S_PW_0.0_5','S_PW_0.0_7','S_PW_4.8_5',
+ 'S_RW_4.8_10','S_RW_4.8_11','S_RW_4.8_14','S_RW_4.8_15','S_RW_5.6_14','S_RW_6.0_10','S_RW_6.0_11','S_RW_6.0_14',
+ 'S_SL_0.0_12','S_SL_0.0_15','S_SL_3.6_12','S_SL_3.6_18','S_SL_3.7_18','S_SL_4.7_16','S_SL_4.8_15','S_SL_4.8_16','S_SL_4.8_30','S_SL_4.9_30','S_SL_5.0_16','S_SL_5.4_12','S_SL_5.4_15','S_SL_5.4_30','S_SL_5.4_45','S_SL_5.5_30','S_SL_5.6_16','S_SL_5.9_12','S_SL_6.0_15','S_SL_6.0_30'
+];
+
+/* Rank a code against what was typed; -1 = no match, lower = better.
+   Tier 1 is the field shorthand: letters then numbers matched, in order, against the
+   start of the product, length and SED parts — so "S16" finds sawlogs with a 16 cm SED
+   and "PW5" finds pulpwood with a 5 cm SED. Later tiers are looser fallbacks. */
+function gradeRank(code,q){
+  const Q=String(q).trim().toUpperCase(), C=String(code).toUpperCase();
+  if(!Q||C===Q)return 0;
+  const segs=C.split(/[^A-Z0-9.]+/).filter(Boolean), toks=Q.match(/[A-Z]+|\d+(?:\.\d+)?/g)||[];
+  const inOrder=ss=>{if(!toks.length)return false;let i=0;
+    for(const t of toks){while(i<ss.length&&!ss[i].startsWith(t))i++;if(i>=ss.length)return false;i++;}return true;};
+  if(segs.length===4&&inOrder(segs.slice(1)))return 1;
+  if(C.startsWith(Q))return 2;
+  if(inOrder(segs))return 3;
+  const flat=Q.replace(/[^A-Z0-9]/g,'');
+  if(flat&&C.replace(/[^A-Z0-9]/g,'').includes(flat))return 4;
+  return -1;
+}
+/* GRADE_CODES plus any extra (hand-typed, remembered) grades, best matches first */
+function searchGrades(q,extra){
+  const pool=GRADE_CODES.slice();
+  (extra||[]).forEach(v=>{if(v&&!pool.some(c=>c.toUpperCase()===String(v).toUpperCase()))pool.push(v);});
+  return pool.map((c,i)=>[c,gradeRank(c,q),i]).filter(r=>r[1]>=0)
+             .sort((a,b)=>a[1]-b[1]||a[2]-b[2]).map(r=>r[0]);
+}
 
 /* ================================================================
    3. STATE + PERSISTENCE (IndexedDB, photos held as Blobs)
@@ -1044,7 +1113,8 @@ function syncHeader(){
   S.place=document.getElementById('f-place').value.trim();
   S.assessor=document.getElementById('f-assessor').value.trim();
   S.crew=document.getElementById('f-crew').value.trim();
-  S.grade=document.getElementById('f-grade').value.trim();
+  const g=document.getElementById('f-grade');
+  g.value=canonGrade(g.value); S.grade=g.value;   // "s_sl_4.8_16" is stored as S_SL_4.8_16
   ['sedmin','sedmax','ledmin','ledmax','lenmin','lenmax'].forEach(k=>{
     S.bracket[k]=document.getElementById('b-'+k).value.trim();
   });
@@ -1053,7 +1123,7 @@ function syncHeader(){
 /* recall lists update when a header field is committed, not on every log tap */
 function rememberHeader(){
   remember('assessor',S.assessor); remember('crew',S.crew); remember('grade',S.grade);
-  fillList('l-assessor','assessor'); fillList('l-crew','crew'); fillList('l-grade','grade');
+  fillList('l-assessor','assessor'); fillList('l-crew','crew');
 }
 function paintHeader(){
   document.getElementById('f-date').value=S.date;
@@ -1071,11 +1141,86 @@ function resetAll(){
   S=blank(); paintHeader(); renderRegister(); sweepUrls(); go('setup');
   saveNow().then(prunePhotos); autoFix();
 }
+/* ---- grade picker: type to search GRADE_CODES; anything typed is still accepted ---- */
+let gradeActive=-1;
+function gradeEls(){return {inp:document.getElementById('f-grade'),list:document.getElementById('grade-list')};}
+function openGrades(){
+  const {inp,list}=gradeEls(); renderGrades();
+  list.classList.remove('hide'); inp.setAttribute('aria-expanded','true');
+}
+function closeGrades(){
+  const {inp,list}=gradeEls();
+  list.classList.add('hide'); inp.setAttribute('aria-expanded','false');
+  inp.removeAttribute('aria-activedescendant'); gradeActive=-1;
+}
+function renderGrades(){
+  const {inp,list}=gradeEls(), q=inp.value.trim();
+  list.innerHTML=''; gradeActive=-1; inp.removeAttribute('aria-activedescendant');
+  const opt=(val,label,note,cls)=>{
+    const o=document.createElement('div');
+    o.className='combo-opt'+(cls?' '+cls:''); o.id='gopt-'+list.querySelectorAll('.combo-opt').length;
+    o.setAttribute('role','option'); o.setAttribute('aria-selected','false'); o.dataset.v=val;
+    o.textContent=label;
+    if(note){const sm=document.createElement('small');sm.textContent=note;o.appendChild(sm);}
+    o.onclick=()=>pickGrade(val); list.appendChild(o);
+  };
+  const grp=t=>{const h=document.createElement('div');h.className='combo-grp';h.setAttribute('role','presentation');
+    h.textContent=t;list.appendChild(h);};
+  const recent=recall('grade');
+  if(!q){
+    if(recent.length){grp('Recent');recent.slice(0,6).forEach(v=>opt(v,v));}
+    let last='';
+    GRADE_CODES.forEach(c=>{const g=c.split('_').slice(0,2).join(' · ');if(g!==last){grp(g);last=g;}opt(c,c);});
+    return;
+  }
+  const hits=searchGrades(q,recent);
+  const known=hits.some(h=>h.toUpperCase()===q.toUpperCase());
+  if(!hits.length)opt(q,'Use \u201c'+q+'\u201d','not in the list','free');
+  hits.forEach(c=>opt(c,c));
+  if(hits.length&&!known)opt(q,'Use \u201c'+q+'\u201d as typed','not in the list','free');
+}
+function pickGrade(v){
+  const {inp}=gradeEls(); inp.value=v; closeGrades();
+  syncHeader(); rememberHeader(); inp.blur();   // blur drops the keyboard
+}
+function moveGrade(d){
+  const {inp,list}=gradeEls(), os=[...list.querySelectorAll('.combo-opt')]; if(!os.length)return;
+  if(gradeActive>=0)os[gradeActive].setAttribute('aria-selected','false');
+  gradeActive=(gradeActive+d+os.length)%os.length;
+  const o=os[gradeActive]; o.setAttribute('aria-selected','true');
+  inp.setAttribute('aria-activedescendant',o.id); o.scrollIntoView({block:'nearest'});
+}
+/* a typed value that matches a listed code (any case) is stored in canonical form */
+function canonGrade(v){const u=String(v).trim().toUpperCase();return GRADE_CODES.find(c=>c===u)||String(v).trim();}
 /* @test-extract-end — everything above this line is DOM-free at parse time and is
    what test/pdf-smoke.js pulls out to run in Node. Do not move DOM calls above it. */
 
 ['f-date','f-place','f-assessor','f-crew','f-grade','b-sedmin','b-sedmax','b-ledmin','b-ledmax','b-lenmin','b-lenmax']
   .forEach(id=>document.getElementById(id).addEventListener('change',()=>{syncHeader();rememberHeader();}));
+
+/* grade picker wiring */
+(()=>{
+  const {inp,list}=gradeEls();
+  inp.addEventListener('focus',()=>{
+    openGrades();
+    // lift the field (label included) to the top so the list isn't hidden by the keyboard
+    setTimeout(()=>inp.parentNode.scrollIntoView({block:'start',behavior:'smooth'}),300);
+  });
+  inp.addEventListener('input',openGrades);
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'){e.preventDefault();if(list.classList.contains('hide'))openGrades();moveGrade(1);}
+    else if(e.key==='ArrowUp'){e.preventDefault();moveGrade(-1);}
+    else if(e.key==='Enter'){e.preventDefault();
+      const o=gradeActive>=0&&list.querySelectorAll('.combo-opt')[gradeActive];
+      if(o)pickGrade(o.dataset.v);else{closeGrades();inp.blur();}}
+    else if(e.key==='Escape'){closeGrades();}
+  });
+  inp.addEventListener('blur',()=>{
+    setTimeout(()=>{if(document.activeElement!==inp)closeGrades();},200);
+  });
+  // keep focus in the input while an option is tapped (scrolling the list still works)
+  ['pointerdown','mousedown'].forEach(ev=>list.addEventListener(ev,e=>e.preventDefault()));
+})();
 
 /* iOS may suspend or kill a backgrounded web app without warning: write pending
    changes the moment the app is hidden instead of waiting out the debounce. */
@@ -1129,7 +1274,7 @@ function applyUpdate(){
     S=prev;   // header filled in earlier today, no logs yet: keep it
   }
   S.bracket=S.bracket||{};
-  fillList('l-assessor','assessor'); fillList('l-crew','crew'); fillList('l-grade','grade');
+  fillList('l-assessor','assessor'); fillList('l-crew','crew');
   paintHeader(); renderRegister(); go(start);
   saveNow().then(prunePhotos);   // also migrates v1 inline photos into the photos store
   autoFix();

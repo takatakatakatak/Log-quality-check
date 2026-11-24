@@ -69,6 +69,22 @@ bracketed between them conforms. That is what the optional "Stack bracket" panel
 records, and the PDF states the logic explicitly so a reader understands how 40 logs
 were assessed from six measurements. Do not replace it with per-log dimension entry.
 
+**Grade codes** read `species_product_length_SED`, e.g. `S_SL_4.8_16` is species S,
+product SL (sawlog), 4.8 m contract length, 16 cm minimum SED. The length is a sale
+designation, not the cut length: a 4.8 log is actually docked longer (about 4.95 m in
+that example). Never derive a length tolerance from the code. The 62 codes in
+`GRADE_CODES` came from roadside stock reports, with only the grade column kept. Field
+shorthand drops the species and the underscores: **"S16" means a sawlog with a 16 cm
+SED**, so the grade search matches typed letters then numbers, in order, against the
+product, length and SED parts first (`gradeRank()`, tier 1).
+
+**No identifying data in this repo.** The repo is public and the tool must not be
+traceable to any grower, customer or contractor. Grade codes only: no customer or
+contractor codes, compartment names, tonnages, people or real coordinates, including
+in test fixtures and placeholders. Source reports must never be committed; keep them
+outside the repo or in `.git/info/exclude`. The smoke test fails on a known list of
+banned strings.
+
 Vocabulary, so the copy stays credible: **SED** small-end diameter, **LED**
 large-end diameter, **docking** cross-cutting to length, **ramicorn** a steeply
 angled oversized branch, **fluting** longitudinal stem grooving, **kino** gum vein.
@@ -84,7 +100,7 @@ step or additional HTTP requests, and both are net negatives here.
 | Section | Contents |
 |---|---|
 | 1 | PDF writer: `Doc` class, text metrics, JPEG parsing |
-| 2 | `DEFECTS` — the defect schedule, grouped |
+| 2 | `DEFECTS` — the defect schedule, grouped; `GRADE_CODES` and the grade search ranking |
 | 3 | State shape, IndexedDB persistence, localStorage recall lists |
 | 4 | Pane navigation |
 | 5 | Geolocation |
@@ -199,8 +215,9 @@ worker installation, and the share-sheet handoff to Mail.
 
 ## Roadmap
 
-**Grade/tolerance matrix.** The intended next feature. `grade` becomes a dropdown
-sourced from a customer/grade table, and selecting one loads its tolerances so a
+**Grade/tolerance matrix.** The intended next feature. `grade` is already a
+type-to-search picker over `GRADE_CODES`; the next step is a table keyed by code, so
+that selecting one loads its tolerances so a
 measured value can be checked against spec at entry. Sketch of the shape, kept
 inline in `index.html` for the same no-dependencies reason:
 

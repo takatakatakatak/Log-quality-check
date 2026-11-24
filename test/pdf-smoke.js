@@ -43,7 +43,7 @@ js = js.replace(/\/\*\s*$/, '');
 
 fs.mkdirSync(OUT, { recursive: true });
 const modPath = path.join(OUT, 'extract.js');
-fs.writeFileSync(modPath, js + '\nmodule.exports={Doc,buildPdf,freqTable,fileName,tw,wrapText,jpegInfo,esc,fit,pack,fmtTime,APP_VERSION,PW,MG,setS:v=>{S=v;},getS:()=>S};\n');
+fs.writeFileSync(modPath, js + '\nmodule.exports={Doc,buildPdf,freqTable,fileName,tw,wrapText,jpegInfo,esc,fit,pack,fmtTime,APP_VERSION,GRADE_CODES,searchGrades,canonGrade,PW,MG,setS:v=>{S=v;},getS:()=>S};\n');
 const M = require(modPath);
 
 /* ---------- 2. fixture state ---------- */
@@ -75,9 +75,10 @@ logs.push({
 
 const STATE = {
   date: '2026-08-26',
+  // Synthetic values only. The coordinates are open ocean on purpose.
   place: 'Test compartment, main landing beside the test track',
   assessor: 'Test Assessor',
-  crew: 'Test Crew — harvester and processor, night shift relief crew under supervisor on loan from the northern block',
+  crew: 'Test Crew — harvester and processor, a deliberately long crew description so the footer must truncate',
   grade: 'S_SL_4.8_16',
   gps: { lat: -12.34567, lon: 123.45678, acc: 6.4, at: new Date().toISOString() },
   bracket: { sedmin: '14.2', sedmax: '31.8', ledmin: '18.0', ledmax: '44.5', lenmin: '5.5', lenmax: '5.6' },
@@ -99,6 +100,48 @@ check('esc escapes PDF delimiters', M.esc('a(b)c\\') === 'a\\(b\\)c\\\\');
 check('esc replaces unmappable characters', M.esc('\u{1F332}x') === '?x');
 check('fit truncates to width', M.tw(M.fit('x'.repeat(400), 8, false, 100), 8, false) <= 100);
 check('fmtTime gives HH:MM', /^\d\d:\d\d$/.test(M.fmtTime(at(1))));
+
+console.log('\nGrade search');
+const G = q => M.searchGrades(q, []);
+const sawlog16 = ['A_SL_4.8_16', 'A_SL_4.9_16', 'A_SL_5.4_16', 'S_SL_4.7_16', 'S_SL_4.8_16', 'S_SL_5.0_16', 'S_SL_5.6_16'];
+check('62 grade codes, no duplicates', M.GRADE_CODES.length === 62 && new Set(M.GRADE_CODES).size === 62);
+check('every code is species_product_length_SED', M.GRADE_CODES.every(c => /^[A-Z]+_[A-Z]+_\d+\.\d_\d+$/.test(c)));
+check('"S16" finds sawlogs with 16 cm SED', JSON.stringify(G('S16').sort()) === JSON.stringify(sawlog16), G('S16').join());
+check('search ignores case and spaces', G('s 16').join() === G('S16').join());
+check('"PW5" finds pulpwood 5 cm SED', G('PW5').join() === 'A_PW_0.0_5,S_PW_0.0_5,S_PW_4.8_5', G('PW5').join());
+check('"S30" ranks sawlogs above other S grades', G('S30').slice(0, 8).every(c => c.includes('_SL_')), G('S30').join());
+check('full code typed in lower case matches exactly', G('s_sl_4.8_16')[0] === 'S_SL_4.8_16');
+check('unknown grade returns nothing (typed value used as is)', G('S99').length === 0);
+check('remembered hand-typed grades are searchable', M.searchGrades('X9', ['XX_9_TEST'])[0] === 'XX_9_TEST');
+check('canonGrade normalises listed codes only', M.canonGrade(' s_sl_4.8_16 ') === 'S_SL_4.8_16' && M.canonGrade('custom 9') === 'custom 9');
+
+console.log('\nNo identifying data');
+// SHA-256 (first 16 hex) of lower-case words that must never appear in this public repo:
+// organisation, customer and contractor codes, compartment names and real coordinates.
+// Hashed so this file doesn't itself contain them. Words are runs of [a-z0-9.].
+const BANNED = new Set([
+  '01e76a28977874f8', '02de500142704ded', '074af2bf8e848549', '11a94fd25a7205d8',
+  '1847ec1b65381071', '1a2180aa26f3f33e', '1b611f3954cb3242', '1e51850da91ff6e1',
+  '221f5bcaa2fa7395', '22ab58dc1441e585', '2886b0b748b7eddb', '2cc2c1bbe4b390d6',
+  '38bbc2ef4cbcf828', '3b3516aad1d9e72e', '4230fe76f6f5c455', '4af20f0ac7c26fc8',
+  '4ca6f6d5a544bf57', '4d50e62220103047', '4efeb9b31f09934f', '4f59e0109153a5de',
+  '540cb2d1a1eaef2c', '555b3d8aaac00cb4', '568545cf69c679f2', '61fee9f2287b264c',
+  '66f5060e75d26f80', '6960b9fcfc508bb4', '6d69f1fd4bc77509', '6d8b6fd96b57c7b2',
+  '73659cadfde8431b', '7575e4ca4e6a03f8', '790abdb3a19ec519', '7a5f9aacea246d88',
+  '7ac7027b6c9520f9', '7e97092758573a9c', '801648462211179c', '81df37f9f69927c0',
+  '825155b2dc15f91a', '913e4a09b69b9d54', '949029fa12cbcd29', '97864e878fe129a3',
+  '97fe8a3749069931', '9b06f24716e0c579', 'a1a02b3b16e471e0', 'b7c992207b80abff',
+  'b81d19db3f57e517', 'bbc5a271d4862a55', 'bc6d872285833b16', 'c2e2ca35f4d78918',
+  'c5643f32bf61b942', 'c5fd2a9fa62e9a37', 'ceb00a91525da64f', 'da5b368ed2efd7af',
+  'dac7ec14001a271e', 'dbdb0e9550c302db', 'de23bcd0f2e97ddf', 'ed2abfda9d7e2148',
+  'ef9e07fed52a6b5e', 'fb9ca2061cd722d2'
+]);
+const sha = w => require('crypto').createHash('sha256').update(w).digest('hex').slice(0, 16);
+const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n')
+  .filter(f => f && !/\.(png|jpg)$/.test(f));
+const hits = tracked.filter(f => (fs.readFileSync(path.join(ROOT, f), 'utf8').toLowerCase().match(/[a-z0-9.]+/g) || [])
+  .some(w => BANNED.has(sha(w))));
+check('no identifying names, codes or coordinates in tracked files', hits.length === 0, hits.join(', '));
 
 console.log('\nVersioning');
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
@@ -185,6 +228,7 @@ check('fileName is filesystem-safe', /^[A-Za-z0-9._-]+\.pdf$/.test(M.fileName())
   tryTool('pdftotext', () => {
     const txt = execSync('pdftotext "' + pdfPath + '" -', { encoding: 'utf8' });
     check('assessor name appears in text layer', txt.includes('Test Assessor'));
+    check('grade appears in text layer', txt.includes('S_SL_4.8_16'));
     check('conformance figure appears', /8[0-9]%/.test(txt), txt.match(/\d+%/g));
     check('smart punctuation survives into the PDF', txt.includes('Operator\u2019s') && txt.includes('\u2014'));
     check('bracket shows en dash range', txt.includes('14.2 \u2013 31.8 cm'));
