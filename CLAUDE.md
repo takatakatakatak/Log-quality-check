@@ -275,6 +275,25 @@ appears on next launch.
 - A GPS fix is taken automatically at boot only when location permission is already
   `granted`; the permission prompt itself stays behind the Get fix button.
 
+## iOS keyboard and fixed layers
+
+iOS Safari can draw a focused field's text in the wrong place — it appears to jump out
+of the box — when the field sits inside a `position:fixed` layer and the page beneath
+scrolls while the keyboard opens. The defect sheet is exactly that, so:
+
+- While the sheet is open the page is pinned (`showSheet()` sets `body` to
+  `position:fixed` at the current offset and restores the scroll on close).
+- The sheet is sized to `visualViewport` (the area above the keyboard) by `fitSheet()`,
+  so iOS never needs to scroll the page to reveal the field being typed in; the focused
+  field is centred within the sheet once the keyboard is up.
+- No `-webkit-overflow-scrolling: touch` anywhere: it is obsolete since iOS 13 and is
+  known to detach text and caret rendering from their inputs.
+- No smooth programmatic scrolling while a field is focused and the keyboard is
+  animating; scroll instantly, after it has opened.
+
+Always open and close the sheet through `showSheet()`. This cannot be reproduced in
+desktop browsers; check it on an iPhone.
+
 ## Things deliberately not done
 
 - No cloud sync, no accounts, no multi-user. Adds a privacy review and an outage mode.

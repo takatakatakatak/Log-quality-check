@@ -100,7 +100,7 @@ textarea{min-height:76px;resize:vertical}
 
 /* ---------- grade picker (type to search) ---------- */
 .combo-list{
-  margin-top:6px;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  margin-top:6px;max-height:46vh;overflow-y:auto;overscroll-behavior:contain;
   background:var(--paper);border:1px solid #B9C0AD;border-radius:4px;
 }
 .combo-grp{
@@ -201,11 +201,13 @@ textarea{min-height:76px;resize:vertical}
 .entry .del.armed{background:var(--defect);color:#fff;font-size:16px;font-weight:700;padding:0 12px}
 
 /* ---------- defect sheet ---------- */
-.sheet{position:fixed;inset:0;z-index:60;background:rgba(20,23,15,.55);display:flex;align-items:flex-end}
+/* The sheet is sized from JS to the *visual* viewport (the area above the keyboard) —
+   see fitSheet(). 100dvh is only the starting size before the keyboard opens. */
+.sheet{position:fixed;left:0;right:0;top:0;height:100vh;height:100dvh;z-index:60;
+  background:rgba(20,23,15,.55);display:flex;align-items:flex-end}
 .sheet-panel{
-  background:var(--field);width:100%;max-height:94vh;overflow-y:auto;
+  background:var(--field);width:100%;max-height:calc(100% - 16px);overflow-y:auto;overscroll-behavior:contain;
   border-radius:12px 12px 0 0;padding:16px 14px calc(20px + env(safe-area-inset-bottom));
-  -webkit-overflow-scrolling:touch;
 }
 .sheet-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
 /* Save/Cancel stay pinned to the bottom of the sheet: the defect list runs to several
@@ -788,7 +790,7 @@ function openSheet(d,idx){
   document.getElementById('d-note').value=d.note||'';
   document.getElementById('photo-msg').textContent='';
   buildChips(); renderStrip();
-  document.getElementById('sheet').classList.remove('hide');
+  showSheet(true);
 }
 /* iOS Safari ignores navigator.vibrate, so the tally also flashes: the forester
    can confirm a tap registered from the corner of his eye. */
@@ -823,7 +825,7 @@ function buildChips(){
     d.appendChild(c); box.appendChild(d);
   });
 }
-function cancelSheet(){ draft=null; editing=-1; document.getElementById('sheet').classList.add('hide'); sweepUrls(); }
+function cancelSheet(){ draft=null; editing=-1; showSheet(false); sweepUrls(); }
 function commitSheet(){
   draft.meas=document.getElementById('d-meas').value.trim();
   draft.spec=document.getElementById('d-spec').value.trim();
@@ -835,7 +837,7 @@ function commitSheet(){
   const wasEdit=editing>=0;
   if(wasEdit)S.logs[editing]=draft; else S.logs.push(draft);
   draft=null; editing=-1;
-  document.getElementById('sheet').classList.add('hide');
+  showSheet(false);
   renderRegister(); save(); sweepUrls();
   if(!wasEdit)haptic(false);
 }
@@ -1189,6 +1191,31 @@ function resetAll(){
   S=blank(); paintHeader(); renderRegister(); sweepUrls(); go('setup');
   saveNow().then(prunePhotos); autoFix();
 }
+/* ---- defect sheet vs the iOS keyboard ----
+   iOS Safari can draw the text of a focused field in the wrong place (it appears to jump
+   out of the box) when the field sits in a fixed overlay and the page underneath scrolls
+   while the keyboard opens. So while the sheet is open the page is pinned in place, and
+   the sheet is resized to the visual viewport — the part above the keyboard — so iOS
+   never has to scroll the page to reveal the field being typed in. */
+let lockedY=0;
+function showSheet(on){
+  const sh=document.getElementById('sheet'), st=document.body.style;
+  if(on){
+    lockedY=window.scrollY;
+    st.position='fixed'; st.top=(-lockedY)+'px'; st.left='0'; st.right='0';
+    sh.classList.remove('hide'); fitSheet();
+  }else{
+    sh.classList.add('hide');
+    st.position=''; st.top=''; st.left=''; st.right='';
+    window.scrollTo(0,lockedY);
+  }
+}
+function fitSheet(){
+  const sh=document.getElementById('sheet'); if(!sh||sh.classList.contains('hide'))return;
+  const vv=window.visualViewport;
+  sh.style.top=(vv?vv.offsetTop:0)+'px';
+  sh.style.height=(vv?vv.height:window.innerHeight)+'px';
+}
 /* ---- grade picker: type to search GRADE_CODES; anything typed is still accepted ---- */
 let gradeActive=-1;
 function gradeEls(){return {inp:document.getElementById('f-grade'),list:document.getElementById('grade-list')};}
@@ -1251,8 +1278,10 @@ function canonGrade(v){const u=String(v).trim().toUpperCase();return GRADE_CODES
   const {inp,list}=gradeEls();
   inp.addEventListener('focus',()=>{
     openGrades();
-    // lift the field (label included) to the top so the list isn't hidden by the keyboard
-    setTimeout(()=>inp.parentNode.scrollIntoView({block:'start',behavior:'smooth'}),300);
+    // lift the field (label included) to the top so the list isn't hidden by the keyboard.
+    // Instant, and only after the keyboard has finished opening: scrolling the page while
+    // iOS is still animating the keyboard is what leaves typed text drawn out of place.
+    setTimeout(()=>{if(document.activeElement===inp)inp.parentNode.scrollIntoView({block:'start'});},450);
   });
   inp.addEventListener('input',openGrades);
   inp.addEventListener('keydown',e=>{
@@ -1269,6 +1298,17 @@ function canonGrade(v){const u=String(v).trim().toUpperCase();return GRADE_CODES
   // keep focus in the input while an option is tapped (scrolling the list still works)
   ['pointerdown','mousedown'].forEach(ev=>list.addEventListener(ev,e=>e.preventDefault()));
 })();
+
+/* keep the sheet fitted to the visible area as the keyboard opens and closes, and bring
+   the field being typed in to the middle of the sheet once the keyboard is up */
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',fitSheet);
+  visualViewport.addEventListener('scroll',fitSheet);
+}
+document.getElementById('sheet').addEventListener('focusin',e=>{
+  if(!e.target.matches('input[type=text],textarea'))return;
+  setTimeout(()=>{if(document.activeElement===e.target)e.target.scrollIntoView({block:'center'});},450);
+});
 
 /* iOS may suspend or kill a backgrounded web app without warning: write pending
    changes the moment the app is hidden instead of waiting out the debounce. */
