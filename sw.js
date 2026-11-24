@@ -1,5 +1,10 @@
 /* Log Quality Check — offline service worker.
-   Cache-first for the app shell. Bump CACHE when you change index.html. */
+   Cache-first for the app shell. Bump CACHE when you change index.html, and keep
+   APP_VERSION in index.html equal to its suffix (the smoke test checks this).
+
+   Why the bump matters: the browser re-installs a service worker only when sw.js
+   itself changes byte-for-byte. Changing CACHE is that change. The install then
+   re-fetches the whole shell into a fresh cache and the old cache is deleted. */
 
 const CACHE = 'logcheck-v2';
 const SHELL = [
@@ -14,7 +19,10 @@ const SHELL = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(SHELL))
+      // cache:'reload' bypasses the HTTP cache. GitHub Pages sends max-age=600, so
+      // without it a new worker could cache an index.html up to ten minutes stale
+      // and keep serving it until the next version bump.
+      .then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });
@@ -36,7 +44,8 @@ self.addEventListener('fetch', e => {
     caches.match(e.request, { ignoreSearch: true }).then(hit => {
       if (hit) {
         // Serve instantly from cache, refresh quietly in the background when online.
-        fetch(e.request)
+        // by URL: a navigation Request can't be re-issued with options
+        fetch(e.request.url, { cache: 'no-cache' })
           .then(res => { if (res && res.ok) caches.open(CACHE).then(c => c.put(e.request, res)); })
           .catch(() => {});
         return hit;

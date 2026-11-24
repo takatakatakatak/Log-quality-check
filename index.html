@@ -44,13 +44,18 @@ body{
 .masthead{
   background:var(--ink);color:#F3F5EF;
   padding:calc(14px + env(safe-area-inset-top)) 16px 12px;
-  display:flex;align-items:baseline;gap:10px;
+  display:flex;align-items:center;gap:10px;
 }
 .masthead h1{
-  font-size:17px;margin:0;font-weight:700;
+  font-size:17px;margin:0;font-weight:700;white-space:nowrap;
   letter-spacing:.14em;text-transform:uppercase;
 }
-.masthead .ver{margin-left:auto;font-family:var(--mono);font-size:11px;color:#8C9683}
+.masthead .ver{
+  margin-left:auto;appearance:none;border:0;background:none;padding:0;
+  font-family:var(--mono);font-size:12px;line-height:1.3;color:#A9B29F;
+  text-align:right;white-space:pre;   /* version on one line, status below */
+}
+.masthead .ver.update{background:var(--spec);color:#fff;font-weight:700;border-radius:4px;padding:6px 10px;margin:-6px 0;text-align:center}
 
 /* ---------- steps ---------- */
 .steps{display:flex;background:var(--ink);border-top:1px solid #2C3126}
@@ -215,7 +220,7 @@ textarea{min-height:76px;resize:vertical}
 
 <header class="masthead">
   <h1>Log Quality Check</h1>
-  <span class="ver" id="ver">v1.0</span>
+  <button class="ver" id="ver" type="button" onclick="applyUpdate()">v2</button>
 </header>
 <nav class="steps" role="tablist">
   <button id="tab-setup" role="tab" aria-current="true" onclick="go('setup')">1 · Setup</button>
@@ -1030,6 +1035,10 @@ async function makeReport(mode){
 /* ================================================================
    10. HEADER SYNC / BOOT
    ================================================================ */
+/* Shown in the masthead so you can tell which build a phone is running.
+   Must equal the suffix of CACHE in sw.js ('logcheck-' + APP_VERSION); bump both
+   together. test/pdf-smoke.js fails if they disagree. */
+const APP_VERSION='v2';
 function syncHeader(){
   S.date=document.getElementById('f-date').value||todayISO();
   S.place=document.getElementById('f-place').value.trim();
@@ -1074,18 +1083,34 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('pagehide',()=>flush());
 
 /* ---- offline install (service worker) ---- */
-function offlineState(t){const el=document.getElementById('ver');if(el)el.textContent=t;}
+let updateReady=false;
+function offlineState(t){const el=document.getElementById('ver');if(el)el.textContent=APP_VERSION+'\n'+t;}
+/* A newer build has installed in the background. Say so in the masthead and let the
+   forester restart when it suits him — never interrupt an assessment to do it. */
+function showUpdateReady(){
+  updateReady=true;
+  const el=document.getElementById('ver');
+  el.textContent='Update ready\ntap to restart'; el.classList.add('update');
+}
+function applyUpdate(){
+  if(!updateReady||draft)return;
+  try{sessionStorage.setItem('lc_resume','1');}catch(e){}
+  saveNow().then(()=>location.reload());
+}
 (function registerSW(){
-  if(!('serviceWorker' in navigator)){offlineState('v1.0 · online only');return;}
+  if(!('serviceWorker' in navigator)){offlineState('online only');return;}
   if(location.protocol!=='https:'&&location.hostname!=='localhost'){
-    offlineState('v1.0 · needs https');return;}
+    offlineState('needs https');return;}
+  const hadController=!!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('./sw.js',{scope:'./'})
     .then(reg=>{
-      offlineState(navigator.serviceWorker.controller?'v1.0 · offline ready':'v1.0 · caching…');
-      navigator.serviceWorker.addEventListener('controllerchange',()=>offlineState('v1.0 · offline ready'));
+      offlineState(hadController?'offline ready':'caching…');
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(hadController)showUpdateReady(); else offlineState('offline ready');
+      });
       reg.update&&reg.update();
     })
-    .catch(()=>offlineState('v1.0 · online only'));
+    .catch(()=>offlineState('online only'));
 })();
 
 (async function boot(){
@@ -1094,8 +1119,10 @@ function offlineState(t){const el=document.getElementById('ver');if(el)el.textCo
   if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
   const prev=await loadSession();
   let start='setup';
+  let restarted=false;   // set by applyUpdate(): resume without asking
+  try{restarted=sessionStorage.getItem('lc_resume')==='1';sessionStorage.removeItem('lc_resume');}catch(e){}
   if(prev && prev.logs && prev.logs.length){
-    if(confirm('Resume the unfinished assessment from '+fmtDate(prev.date)+' ('+prev.logs.length+' logs)?')){
+    if(restarted||confirm('Resume the unfinished assessment from '+fmtDate(prev.date)+' ('+prev.logs.length+' logs)?')){
       S=prev; start='check';
     }else S=blank();
   }else if(prev && prev.date===todayISO()){
