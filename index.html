@@ -199,6 +199,13 @@ textarea{min-height:76px;resize:vertical}
   -webkit-overflow-scrolling:touch;
 }
 .sheet-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+/* Save/Cancel stay pinned to the bottom of the sheet: the defect list runs to several
+   screens, and the forester must never have to scroll to finish a log. */
+.sheet-actions{
+  position:sticky;bottom:calc(-20px - env(safe-area-inset-bottom));z-index:2;
+  margin:18px -14px 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  background:var(--field);border-top:1px solid var(--rule);box-shadow:0 -6px 12px rgba(20,23,15,.08);
+}
 .sheet-head h2{margin:0;font-size:19px;font-weight:700}
 .sheet-head .sub{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
 .group{margin-bottom:12px}
@@ -375,7 +382,7 @@ textarea{min-height:76px;resize:vertical}
     <div class="photo-strip" id="strip"></div>
     <p class="msg" id="photo-msg"></p>
 
-    <div class="pillrow" style="margin-top:18px">
+    <div class="pillrow sheet-actions">
       <button class="btn btn-quiet" style="flex:1" onclick="cancelSheet()">Cancel</button>
       <button class="btn btn-solid" style="flex:2" onclick="commitSheet()">Save log</button>
     </div>
@@ -520,13 +527,26 @@ class Doc{
 /* ================================================================
    2. DEFECT SCHEDULE + GRADE CODES
    ================================================================ */
+/* Consolidated from customer log specifications (not kept in this repo). Customers name
+   the same defect differently; each entry here is one defect in plain landing language,
+   with no limits attached — limits belong to the grade, not the defect (constraint 6).
+   Groups run in the order a log is usually looked over: form, branches, ends, then the rest.
+   Renaming an entry is safe: saved logs keep their text, and editing an old log shows any
+   name no longer listed under "Earlier list". */
 const DEFECTS=[
- ['Dimension',['SED under spec','LED over spec','Short length','Over length / trim','Butt flare not trimmed','Excessive taper']],
- ['Form',['Sweep out of limit','Crook / kink','Ramicorn / double leader','Fluting','Spiral grain']],
- ['Branching',['Oversize branch / knot','Branch stub too long','Whorl defect']],
- ['Damage',['Harvester head damage','Bark stripping','Poor docking / ragged end','Angled cut','End split / shake','Fire scar / char','Mechanical gouge']],
- ['Biological',['Decay / rot','Blue stain','Insect / borer','Resin pocket','Kino / gum vein']],
- ['Presentation',['Excess bark','Mud / stone / foreign matter','Wrong grade segregation','Wrong stack / parcel','Wire or metal']]
+ ['Form',['Sweep','Sweep over billet length','Kink / crook','Wobble','Spiral grain','Fluting',
+   'Nodal swelling','Fork / double leader / ramicorn','Excessive taper']],
+ ['Branches & knots',['Knots or branches on clear grade','Oversize branch / knot','Branch cut face too large',
+   'Branch not trimmed flush / stub','Whorl cluster','Spike knot','Unsound / dead knot','Navel','Birds eye']],
+ ['Log end',['Out of round / ovality','Butt flare not docked','Angle cut / not square','Scarf','Sloven',
+   'End split','Draw wood','Side tear under bark','Pith / heart out of centre','Brown heart','Double heart',
+   'Compression wood','Embedded resin / resin pocket','Broken end / no saw cut']],
+ ['Dimension',['SED under spec','LED over spec','Short of cut window','Over cut window / trim']],
+ ['Damage',['Damage / scar over limit','Harvester / machine damage','Slabbing','Bark stripping','Fire scar / charcoal']],
+ ['Biological & condition',['Sapstain / blue stain','Rot / decay / fungal','Insect / borer','Dead / old dry wood',
+   'Over age at roadside']],
+ ['Presentation',['Foreign matter (metal, stone, mud)','Excess bark / not debarked','Marking missing or wrong',
+   'Wrong grade segregation','Wrong stack / parcel']]
 ];
 
 /* Grade codes called in over recent weeks: species _ product _ contract length (m) _ SED (cm).
@@ -761,7 +781,11 @@ function haptic(ok){
 
 function buildChips(){
   const box=document.getElementById('chip-groups'); box.innerHTML='';
-  DEFECTS.forEach(([grp,items])=>{
+  // a log saved under an earlier defect list keeps those names, shown so they can be cleared
+  const listed=new Set(DEFECTS.flatMap(g=>g[1]));
+  const earlier=draft.defects.filter(d=>!listed.has(d));
+  const groups=earlier.length?[['Earlier list',earlier]].concat(DEFECTS):DEFECTS;
+  groups.forEach(([grp,items])=>{
     const d=document.createElement('div'); d.className='group';
     const h=document.createElement('h3'); h.textContent=grp; d.appendChild(h);
     const c=document.createElement('div'); c.className='chips';

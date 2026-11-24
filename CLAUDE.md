@@ -78,6 +78,19 @@ shorthand drops the species and the underscores: **"S16" means a sawlog with a 1
 SED**, so the grade search matches typed letters then numbers, in order, against the
 product, length and SED parts first (`gradeRank()`, tier 1).
 
+**The defect schedule** (`DEFECTS`, 51 entries in 7 groups) was consolidated from
+the customer log specifications. Each customer names the same defect differently
+("log end draw wood", "sawlog end draw wood", "felling drawn wood"); each entry is one
+defect in plain landing language. The ply/veneer specs check the most characteristics,
+mostly at the log end (out of round, butt flare, angle cut, scarf, sloven, splits, draw
+wood, side tear, pith position, brown heart, navel, birds eye), so those are all listed.
+Entries carry no limits and no customer names; the test fails if a name contains a
+digit. Groups run form → branches & knots → log end → dimension → damage → biological &
+condition → presentation, the order a log is usually looked over. Renaming an entry is
+safe: saved logs keep their text, and editing an old log shows unlisted names under
+"Earlier list". The specification document itself is confidential and must never be
+added to this repo.
+
 **No identifying data in this repo.** The repo is public and the tool must not be
 traceable to any grower, customer or contractor. Grade codes only: no customer or
 contractor codes, compartment names, tonnages, people or real coordinates, including

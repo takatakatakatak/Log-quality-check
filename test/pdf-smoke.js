@@ -43,7 +43,7 @@ js = js.replace(/\/\*\s*$/, '');
 
 fs.mkdirSync(OUT, { recursive: true });
 const modPath = path.join(OUT, 'extract.js');
-fs.writeFileSync(modPath, js + '\nmodule.exports={Doc,buildPdf,freqTable,fileName,tw,wrapText,jpegInfo,esc,fit,pack,fmtTime,APP_VERSION,GRADE_CODES,searchGrades,canonGrade,PW,MG,setS:v=>{S=v;},getS:()=>S};\n');
+fs.writeFileSync(modPath, js + '\nmodule.exports={Doc,buildPdf,freqTable,fileName,tw,wrapText,jpegInfo,esc,fit,pack,fmtTime,APP_VERSION,GRADE_CODES,DEFECTS,searchGrades,canonGrade,PW,MG,setS:v=>{S=v;},getS:()=>S};\n');
 const M = require(modPath);
 
 /* ---------- 2. fixture state ---------- */
@@ -56,18 +56,18 @@ const at = i => new Date(t0.getTime() + i * 90000).toISOString();
 for (let i = 1; i <= 22; i++) logs.push({ n: i, ok: true, at: at(i) });
 logs.push({
   n: 23, ok: false, at: at(23),
-  defects: ['Sweep out of limit', 'Oversize branch / knot'],
+  defects: ['Sweep', 'Oversize branch / knot'],
   meas: 'sweep 62 mm/m', spec: 'max 40 mm/m',
   note: 'Mid-stem sweep on butt log. Operator cutting through the bend rather than docking at the change of direction. Raised with the processor operator on site; long note included here deliberately so the test exercises text wrapping and page breaking.',
   photos: [photo(), photo(), photo()]
 });
 logs.push({ n: 24, ok: false, at: at(24), defects: ['SED under spec'], meas: 'SED 11.8 cm', spec: 'min 14 cm', note: '', photos: [photo()] });
-logs.push({ n: 25, ok: false, defects: ['Poor docking / ragged end', 'Excess bark'], meas: '', spec: '', note: 'Ragged docking on three consecutive stems.', photos: [] });
+logs.push({ n: 25, ok: false, defects: ['Sloven', 'Excess bark / not debarked'], meas: '', spec: '', note: 'Ragged docking on three consecutive stems.', photos: [] });
 // many defects + iOS smart punctuation: exercises wrapping and WinAnsi mapping
 logs.push({
   n: 26, ok: false, at: at(26),
-  defects: ['Sweep out of limit', 'Crook / kink', 'Ramicorn / double leader', 'Fluting', 'Spiral grain',
-            'Harvester head damage', 'Bark stripping', 'Mud / stone / foreign matter'],
+  defects: ['Sweep', 'Kink / crook', 'Fork / double leader / ramicorn', 'Fluting', 'Spiral grain',
+            'Harvester / machine damage', 'Draw wood', 'Foreign matter (metal, stone, mud)'],
   meas: 'sweep 55\u201360 mm/m', spec: 'max 40 mm/m',
   note: 'Operator\u2019s head pressure too high \u2014 \u201cfeed rollers\u201d slipping\u2026',
   photos: [photo()]
@@ -101,6 +101,13 @@ check('esc replaces unmappable characters', M.esc('\u{1F332}x') === '?x');
 check('fit truncates to width', M.tw(M.fit('x'.repeat(400), 8, false, 100), 8, false) <= 100);
 check('fmtTime gives HH:MM', /^\d\d:\d\d$/.test(M.fmtTime(at(1))));
 
+console.log('\nDefect schedule');
+const allDefects = M.DEFECTS.flatMap(g => g[1]);
+check('defect names are unique', new Set(allDefects).size === allDefects.length, allDefects.length + ' entries');
+check('defect groups are non-empty', M.DEFECTS.every(g => g[0] && g[1].length));
+check('defect names carry no limits (no digits)', allDefects.every(d => !/\d/.test(d)), allDefects.filter(d => /\d/.test(d)).join());
+check('defect names fit one chip line', allDefects.every(d => d.length <= 36), allDefects.filter(d => d.length > 36).join());
+
 console.log('\nGrade search');
 const G = q => M.searchGrades(q, []);
 const sawlog16 = ['A_SL_4.8_16', 'A_SL_4.9_16', 'A_SL_5.4_16', 'S_SL_4.7_16', 'S_SL_4.8_16', 'S_SL_5.0_16', 'S_SL_5.6_16'];
@@ -120,21 +127,31 @@ console.log('\nNo identifying data');
 // organisation, customer and contractor codes, compartment names and real coordinates.
 // Hashed so this file doesn't itself contain them. Words are runs of [a-z0-9.].
 const BANNED = new Set([
-  '01e76a28977874f8', '02de500142704ded', '074af2bf8e848549', '11a94fd25a7205d8',
-  '1847ec1b65381071', '1a2180aa26f3f33e', '1b611f3954cb3242', '1e51850da91ff6e1',
-  '221f5bcaa2fa7395', '22ab58dc1441e585', '2886b0b748b7eddb', '2cc2c1bbe4b390d6',
-  '38bbc2ef4cbcf828', '3b3516aad1d9e72e', '4230fe76f6f5c455', '4af20f0ac7c26fc8',
-  '4ca6f6d5a544bf57', '4d50e62220103047', '4efeb9b31f09934f', '4f59e0109153a5de',
-  '540cb2d1a1eaef2c', '555b3d8aaac00cb4', '568545cf69c679f2', '61fee9f2287b264c',
-  '66f5060e75d26f80', '6960b9fcfc508bb4', '6d69f1fd4bc77509', '6d8b6fd96b57c7b2',
-  '73659cadfde8431b', '7575e4ca4e6a03f8', '790abdb3a19ec519', '7a5f9aacea246d88',
+  '01e76a28977874f8', '02de500142704ded', '03d21914b29cf0da', '056c14b618331e9e',
+  '074af2bf8e848549', '0a52c5a6abc80f87', '0b13f2d7e8f91660', '0d2690431235a135',
+  '11a94fd25a7205d8', '1372c63b35ea72a5', '1847ec1b65381071', '18c33592ef0c5fc3',
+  '1a2180aa26f3f33e', '1b611f3954cb3242', '1be9291713c761cd', '1e51850da91ff6e1',
+  '1ee123350d630932', '213d21c0e4f00b53', '221f5bcaa2fa7395', '22ab58dc1441e585',
+  '23670cabf30801a3', '23facaae57613a2b', '284db3027411f2e2', '2886b0b748b7eddb',
+  '2cc2c1bbe4b390d6', '2cee7a6a6380a48f', '37ecaf2d12462978', '38bbc2ef4cbcf828',
+  '3b3516aad1d9e72e', '4230fe76f6f5c455', '426d72415baa9710', '4462bce6b4c03fef',
+  '47f134b133960371', '4af20f0ac7c26fc8', '4ca6f6d5a544bf57', '4ccc66522952fe66',
+  '4d50e62220103047', '4e2b8ac667adebbd', '4efeb9b31f09934f', '4f59e0109153a5de',
+  '540cb2d1a1eaef2c', '555b3d8aaac00cb4', '568545cf69c679f2', '5ac9b977aa1d71c0',
+  '5bae752e0c9c8ed0', '61fee9f2287b264c', '66f5060e75d26f80', '6960b9fcfc508bb4',
+  '69cf401e9cb9c2b1', '6d69f1fd4bc77509', '6d8b6fd96b57c7b2', '73659cadfde8431b',
+  '7573255a5e3e2ca1', '7575e4ca4e6a03f8', '790abdb3a19ec519', '7a5f9aacea246d88',
   '7ac7027b6c9520f9', '7e97092758573a9c', '801648462211179c', '81df37f9f69927c0',
-  '825155b2dc15f91a', '913e4a09b69b9d54', '949029fa12cbcd29', '97864e878fe129a3',
-  '97fe8a3749069931', '9b06f24716e0c579', 'a1a02b3b16e471e0', 'b7c992207b80abff',
-  'b81d19db3f57e517', 'bbc5a271d4862a55', 'bc6d872285833b16', 'c2e2ca35f4d78918',
-  'c5643f32bf61b942', 'c5fd2a9fa62e9a37', 'ceb00a91525da64f', 'da5b368ed2efd7af',
-  'dac7ec14001a271e', 'dbdb0e9550c302db', 'de23bcd0f2e97ddf', 'ed2abfda9d7e2148',
-  'ef9e07fed52a6b5e', 'fb9ca2061cd722d2'
+  '825155b2dc15f91a', '861ba9d179ff63fe', '9058aa3ff37e12d0', '913e4a09b69b9d54',
+  '949029fa12cbcd29', '97864e878fe129a3', '97fe8a3749069931', '98c0f87ec38b0c86',
+  '9b06f24716e0c579', 'a15d79acdc8a0e23', 'a1a02b3b16e471e0', 'a7fc711b60212a05',
+  'b7c992207b80abff', 'b81d19db3f57e517', 'bbc5a271d4862a55', 'bc6d872285833b16',
+  'bf446ea38129b6f1', 'c2e2ca35f4d78918', 'c5643f32bf61b942', 'c5fd2a9fa62e9a37',
+  'cc6e11391c066f2a', 'ceb00a91525da64f', 'd044aa6a8efd0530', 'd5391b2f42d7a284',
+  'da5b368ed2efd7af', 'dac7ec14001a271e', 'dbdb0e9550c302db', 'dc90dbda1881aa85',
+  'dcec10fb38d70262', 'de23bcd0f2e97ddf', 'dfbfcd6f5474f6d4', 'e5817865c7156c3f',
+  'e8422bc48257faa2', 'ed2abfda9d7e2148', 'ef9e07fed52a6b5e', 'f4f43646d9a65bc9',
+  'f85fed389745c61b', 'fb9ca2061cd722d2'
 ]);
 const sha = w => require('crypto').createHash('sha256').update(w).digest('hex').slice(0, 16);
 const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n')
@@ -168,7 +185,8 @@ M.setS(STATE);
 const freq = M.freqTable();
 const distinct = new Set(logs.filter(l => !l.ok).flatMap(l => l.defects));
 check('freqTable counts defects', freq.length === distinct.size, JSON.stringify(freq));
-check('freqTable tallies repeats', freq.find(r => r[0] === 'Sweep out of limit')[1] === 2);
+check('freqTable tallies repeats', freq.find(r => r[0] === 'Sweep')[1] === 2);
+check('fixture defects all come from the schedule', logs.filter(l => !l.ok).every(l => l.defects.every(d => allDefects.includes(d))));
 check('freqTable sorted descending', freq.every((r, i) => i === 0 || freq[i - 1][1] >= r[1]));
 check('fileName is filesystem-safe', /^[A-Za-z0-9._-]+\.pdf$/.test(M.fileName()), M.fileName());
 
