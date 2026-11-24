@@ -1,7 +1,7 @@
 /* Log Quality Check — offline service worker.
    Cache-first for the app shell. Bump CACHE when you change index.html. */
 
-const CACHE = 'logcheck-v1';
+const CACHE = 'logcheck-v2';
 const SHELL = [
   './',
   './index.html',

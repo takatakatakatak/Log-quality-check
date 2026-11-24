@@ -355,8 +355,18 @@ function charW(c){
   return .53;
 }
 function tw(s,size,bold){let w=0;for(const c of String(s))w+=charW(c);return w*size*(bold?1.055:1);}
-function esc(s){let o='';for(const ch of String(s)){const n=ch.charCodeAt(0);
-  if(ch==='\\'||ch==='('||ch===')')o+='\\'+ch;else if(n<32||n>255)o+='-';else o+=ch;}return o;}
+/* Unicode → WinAnsiEncoding for the punctuation iOS types by default (smart quotes,
+   dashes, ellipsis). Without this, "operator’s" prints as "operator-s". */
+const WIN={0x20AC:0x80,0x201A:0x82,0x0192:0x83,0x201E:0x84,0x2026:0x85,0x2020:0x86,0x2021:0x87,
+  0x02C6:0x88,0x2030:0x89,0x0160:0x8A,0x2039:0x8B,0x0152:0x8C,0x017D:0x8E,0x2018:0x91,0x2019:0x92,
+  0x201C:0x93,0x201D:0x94,0x2022:0x95,0x2013:0x96,0x2014:0x97,0x02DC:0x98,0x2122:0x99,0x0161:0x9A,
+  0x203A:0x9B,0x0153:0x9C,0x017E:0x9E,0x0178:0x9F,0x2010:0x2D,0x2011:0x2D,0x2212:0x2D,0x2032:0x27,0x2033:0x22};
+function esc(s){let o='';for(const ch of String(s)){let n=ch.codePointAt(0);
+  if(WIN[n])n=WIN[n];else if(n<32)n=32;else if((n>=0x80&&n<0xA0)||n>255)n=0x3F;
+  const c=String.fromCharCode(n);o+=(c==='\\'||c==='('||c===')')?'\\'+c:c;}return o;}
+/* truncate to fit a width, with an ellipsis */
+function fit(s,size,bold,maxW){s=String(s);if(tw(s,size,bold)<=maxW)return s;
+  while(s.length&&tw(s+'…',size,bold)>maxW)s=s.slice(0,-1);return s.replace(/\s+$/,'')+'…';}
 function wrapText(s,size,bold,maxW){
   const words=String(s).split(/\s+/).filter(Boolean);const L=[];let ln='';
   for(const w of words){const t=ln?ln+' '+w:w;
@@ -418,8 +428,8 @@ class Doc{
     this.pages.forEach((p,i)=>{
       const save=this.page; this.page=p;
       this.line(MG,MG+16,PW-MG,MG+16,'#D2D7C9',.6);
-      this.put(txt,MG,MG+5,7.5,{color:'#7C846F'});
       const lab=`Page ${i+1} of ${this.pages.length}`;
+      this.put(fit(txt,7.5,false,CW-tw(lab,7.5)-16),MG,MG+5,7.5,{color:'#7C846F'});
       this.put(lab,PW-MG-tw(lab,7.5),MG+5,7.5,{color:'#7C846F'});
       this.page=save;
     });
@@ -738,6 +748,8 @@ function fmtDate(iso){
   const [y,m,d]=iso.split('-');
   return d+'/'+m+'/'+y;
 }
+function fmtTime(iso){const d=new Date(iso);if(isNaN(d))return '';
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 async function buildPdf(){
   const doc=new Doc();
   const n=S.logs.length, bad=S.logs.filter(l=>!l.ok), ins=n-bad.length;
@@ -759,14 +771,18 @@ async function buildPdf(){
   doc.kv('Coordinates', S.gps
     ? S.gps.lat.toFixed(5)+', '+S.gps.lon.toFixed(5)+'  (WGS84, +/-'+Math.round(S.gps.acc)+' m, fixed '+new Date(S.gps.at).toLocaleTimeString('en-AU')+')'
     : 'Not recorded');
+  const times=S.logs.map(l=>l.at).filter(Boolean).sort();
+  if(times.length)doc.kv('Time checked',fmtTime(times[0])+' – '+fmtTime(times[times.length-1]));
 
   const bk=S.bracket, hasBk=Object.values(bk).some(v=>v!=='' && v!=null);
   if(hasBk){
     doc.head('Stack bracket');
     doc.text('Extremes of the available stack. Logs bracketed between the recorded minimum and maximum are taken as conforming where both extremes conform.',8.5,{color:'#4A5140',gap:4});
-    doc.kv('SED range',[bk.sedmin,bk.sedmax].filter(v=>v!=='').join(' – ')+(bk.sedmin!==''?' cm':''));
-    doc.kv('LED range',[bk.ledmin,bk.ledmax].filter(v=>v!=='').join(' – ')+(bk.ledmin!==''?' cm':''));
-    doc.kv('Length range',[bk.lenmin,bk.lenmax].filter(v=>v!=='').join(' – ')+(bk.lenmin!==''?' m':''));
+    const range=(lo,hi,u)=>{lo=lo||'';hi=hi||'';
+      if(lo&&hi)return lo+' – '+hi+' '+u; if(lo)return 'min '+lo+' '+u; if(hi)return 'max '+hi+' '+u; return '';};
+    doc.kv('SED range',range(bk.sedmin,bk.sedmax,'cm'));
+    doc.kv('LED range',range(bk.ledmin,bk.ledmax,'cm'));
+    doc.kv('Length range',range(bk.lenmin,bk.lenmax,'m'));
   }
 
   /* summary strip */
@@ -799,14 +815,20 @@ async function buildPdf(){
   if(bad.length){
     doc.head('Out-of-spec register');
     bad.forEach(l=>{
-      doc.space(46);
+      const tx=MG+34, tW=PW-MG-tx, when=l.at?fmtTime(l.at):'';
+      const dl=wrapText(l.defects.join(' · ')||'Defect',10,true,tW-(when?44:0));
+      const bits=[l.meas&&('Measured: '+l.meas), l.spec&&('Spec: '+l.spec)].filter(Boolean).join('    ');
+      const nl=l.note?wrapText(l.note,9,false,tW).length:0;
+      const need=17+(dl.length-1)*13+(bits?wrapText(bits,9,false,tW).length*12.1:0)
+                +(nl?2+nl*12.1:0)+(l.photos.length?12:0)+9;
+      doc.space(Math.min(need,PH-2*MG-80));   // keep an entry together where it fits on a page
       doc.y-=17;
       doc.rect(MG,doc.y-4,26,17,'#A81E0C');
       doc.put(String(l.n).padStart(2,'0'),MG+5,doc.y+1,10,{bold:true,color:'#FFFFFF'});
-      doc.put(l.defects.join(' · ')||'Defect',MG+34,doc.y+1,10,{bold:true});
-      const bits=[l.meas&&('Measured: '+l.meas), l.spec&&('Spec: '+l.spec)].filter(Boolean);
-      if(bits.length){doc.y-=13;doc.put(bits.join('    '),MG+34,doc.y,9,{color:'#4A5140'});}
-      if(l.note){doc.y-=2;doc.text(l.note,9,{x:MG+34,color:'#4A5140'});}
+      if(when)doc.put(when,PW-MG-tw(when,9),doc.y+1,9,{color:'#7C846F'});
+      dl.forEach((ln,i)=>{if(i)doc.y-=13;doc.put(ln,tx,doc.y+1,10,{bold:true});});
+      if(bits)doc.text(bits,9,{x:tx,color:'#4A5140'});
+      if(l.note){doc.y-=2;doc.text(l.note,9,{x:tx,color:'#4A5140'});}
       if(l.photos.length){doc.y-=12;doc.put(l.photos.length+' photo'+(l.photos.length>1?'s':'')+' — see appendix',MG+34,doc.y,8,{color:'#7C846F'});}
       doc.y-=9; doc.line(MG,doc.y,PW-MG,doc.y,'#E4E7DE',.5);
     });
@@ -826,10 +848,11 @@ async function buildPdf(){
         let w=CW, h=w*im.h/im.w;
         const maxH=300;
         if(h>maxH){h=maxH;w=h*im.w/im.h;}
-        doc.space(h+30);
-        doc.y-=14;
-        doc.put('LOG '+String(l.n).padStart(2,'0')+' — '+(l.defects.join(' · ')||'defect')+'  (photo '+(i+1)+' of '+l.photos.length+')',
-                MG,doc.y,8.5,{bold:true,color:'#A81E0C'});
+        const cap=wrapText('LOG '+String(l.n).padStart(2,'0')+' — '+(l.defects.join(' · ')||'defect')+'  (photo '+(i+1)+' of '+l.photos.length+')',
+                8.5,true,CW);
+        doc.space(h+30+(cap.length-1)*11);
+        doc.y-=3;
+        cap.forEach(ln=>{doc.y-=11;doc.put(ln,MG,doc.y,8.5,{bold:true,color:'#A81E0C'});});
         doc.y-=(h+6);
         doc.drawImage(idx,MG+(CW-w)/2,doc.y,w,h);
         doc.y-=10;
