@@ -428,8 +428,8 @@ class Doc{
     for(let i=1;i<lines.length;i++){this.y-=lead;this.put(lines[i],MG+kw,this.y,10);}
     this.y-=3;
   }
-  head(s){
-    this.space(30); this.y-=24;
+  head(s,keep){             // keep: height of content that must follow on the same page
+    this.space(30+(keep||0)); this.y-=24;
     this.put(s.toUpperCase(),MG,this.y,9,{bold:true,color:'#1D5632'});
     this.y-=5; this.line(MG,this.y,PW-MG,this.y,'#1D5632',1); this.y-=4;
   }
@@ -890,7 +890,7 @@ async function buildPdf(){
 
   const bk=S.bracket, hasBk=Object.values(bk).some(v=>v!=='' && v!=null);
   if(hasBk){
-    doc.head('Stack bracket');
+    doc.head('Stack bracket',60);
     doc.text('Extremes of the available stack. Logs bracketed between the recorded minimum and maximum are taken as conforming where both extremes conform.',8.5,{color:'#4A5140',gap:4});
     const range=(lo,hi,u)=>{lo=lo||'';hi=hi||'';
       if(lo&&hi)return lo+' – '+hi+' '+u; if(lo)return 'min '+lo+' '+u; if(hi)return 'max '+hi+' '+u; return '';};
@@ -900,7 +900,7 @@ async function buildPdf(){
   }
 
   /* summary strip */
-  doc.head('Summary');
+  doc.head('Summary',52);
   doc.space(50); doc.y-=44;
   const cells=[['Logs checked',String(n),'#14170F'],['In spec',String(ins),'#1D5632'],
                ['Out of spec',String(bad.length),'#A81E0C'],['Conformance',n?Math.round(ins/n*100)+'%':'n/a','#14170F']];
@@ -915,7 +915,7 @@ async function buildPdf(){
 
   const freq=freqTable();
   if(freq.length){
-    doc.head('Defect frequency');
+    doc.head('Defect frequency',30);
     freq.forEach(([d,c])=>{
       doc.space(15); doc.y-=15;
       doc.put(d,MG,doc.y,10);
@@ -927,15 +927,20 @@ async function buildPdf(){
 
   /* out-of-spec register */
   if(bad.length){
-    doc.head('Out-of-spec register');
-    bad.forEach(l=>{
-      const tx=MG+34, tW=PW-MG-tx, when=l.at?fmtTime(l.at):'';
+    const tx=MG+34, tW=PW-MG-tx;
+    const layout=l=>{
+      const when=l.at?fmtTime(l.at):'';
       const dl=wrapText(l.defects.join(' · ')||'Defect',10,true,tW-(when?44:0));
-      const bits=[l.meas&&('Measured: '+l.meas), l.spec&&('Spec: '+l.spec)].filter(Boolean).join('    ');
+      const bits=[l.meas&&('Measured: '+l.meas), l.spec&&('Spec: '+l.spec)].filter(Boolean).join(' · ');
       const nl=l.note?wrapText(l.note,9,false,tW).length:0;
       const need=17+(dl.length-1)*13+(bits?wrapText(bits,9,false,tW).length*12.1:0)
                 +(nl?2+nl*12.1:0)+(l.photos.length?12:0)+9;
-      doc.space(Math.min(need,PH-2*MG-80));   // keep an entry together where it fits on a page
+      return {when,dl,bits,need:Math.min(need,PH-2*MG-80)};
+    };
+    doc.head('Out-of-spec register',layout(bad[0]).need);   // no heading stranded at a page foot
+    bad.forEach(l=>{
+      const {when,dl,bits,need}=layout(l);
+      doc.space(need);   // keep an entry together where it fits on a page
       doc.y-=17;
       doc.rect(MG,doc.y-4,26,17,'#A81E0C');
       doc.put(String(l.n).padStart(2,'0'),MG+5,doc.y+1,10,{bold:true,color:'#FFFFFF'});
